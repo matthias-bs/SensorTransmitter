@@ -39,6 +39,7 @@
 // History:
 // 20231111 Created based on 
 //          https://github.com/jgromes/RadioLib/blob/master/examples/SX127x/SX127x_Transmit_Blocking/SX127x_Transmit_Blocking.ino
+//          Added checksum calculation
 //
 // ToDo:
 // -
@@ -120,6 +121,25 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
 
     memcpy(msg, preamble, 4);
     memcpy(&msg[4], syncword, 2);
+
+    // Calculate checksum (number number bits set in bytes 14-25)
+    uint8_t bitsSet = 0;
+
+    for(uint8_t p = 14 ; p < 26 ; p++) {
+      uint8_t currentByte = payload[p];
+      while(currentByte) {
+        bitsSet += (currentByte & 1);
+        currentByte >>= 1;
+      }
+    }
+    msg[13] = bitsSet;
+    log_i("Bits set: 0x%02X", bitsSet);
+
+    // First 13 bytes are inverse of last 13 bytes
+    for (unsigned col = 0; col < 26 / 2; ++col) {
+        payload[col] = ~payload[col + 13];
+    }
+
     memcpy(&msg[6], payload, 26);
 
     // Return message size
