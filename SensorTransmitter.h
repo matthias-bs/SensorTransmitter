@@ -34,6 +34,7 @@
 // History:
 // 20231111 Created based on 
 //          https://github.com/jgromes/RadioLib/blob/master/examples/SX127x/SX127x_Transmit_Blocking/SX127x_Transmit_Blocking.ino
+// 20231112 Added utilization of class WeatherSensor
 //
 // ToDo:
 // -
@@ -45,6 +46,8 @@
 
 #include <Arduino.h>
 
+#define NUM_SENSORS 1
+#define WIND_DATA_FLOATINGPOINT
 
 #define TX_INTERVAL 30
 

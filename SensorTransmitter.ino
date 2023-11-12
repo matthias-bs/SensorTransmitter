@@ -40,6 +40,7 @@
 // 20231111 Created based on 
 //          https://github.com/jgromes/RadioLib/blob/master/examples/SX127x/SX127x_Transmit_Blocking/SX127x_Transmit_Blocking.ino
 //          Added checksum calculation
+// 20231112 Added utilization of class WeatherSensor
 //
 // ToDo:
 // -
@@ -48,6 +49,7 @@
 
 #include "SensorTransmitter.h"
 #include <RadioLib.h>
+#include "WeatherSensor.h"
 
 // SX1276 has the following connections:
 // NSS pin:   PIN_TRANSCEIVER_CS
@@ -93,10 +95,13 @@ void setup() {
 // counter to keep track of transmitted packets
 int count = 0;
 
+WeatherSensor ws;
+
 //
 // From from rtl_433 project - https://github.com/merbanan/rtl_433/blob/master/src/devices/bresser_5in1.c (20220212)
 //
 // Example input data:
+//   00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25
 //   EA EC 7F EB 5F EE EF FA FE 76 BB FA FF 15 13 80 14 A0 11 10 05 01 89 44 05 00
 //   CC CC CC CC CC CC CC CC CC CC CC CC CC uu II sS GG DG WW  W TT  T HH RR RR Bt
 // - C = Check, inverted data of 13 byte further
@@ -118,9 +123,47 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
     uint8_t syncword[] = {0x2D, 0xD4};
     uint8_t payload[] = {0xEA, 0xEC, 0x7F, 0xEB, 0x5F, 0xEE, 0xEF, 0xFA, 0xFE, 0x76, 0xBB, 0xFA, 0xFF,
                          0x15, 0x13, 0x80, 0x14, 0xA0, 0x11, 0x10, 0x05, 0x01, 0x89, 0x44, 0x05, 0x00};
-
+    char buf[7];
     memcpy(msg, preamble, 4);
     memcpy(&msg[4], syncword, 2);
+
+    //log_i("SIZE: %d", sizeof(ws.sensor));
+    ws.genMessage(0 /* slot */, 0xff /* id */, SENSOR_TYPE_WEATHER0 /* s_type */);
+
+    payload[14] = (uint8_t)(ws.sensor[0].sensor_id & 0xFF);
+    payload[15] = ((ws.sensor[0].startup ? 0 : 8) << 4) | ws.sensor[0].s_type;
+
+    uint16_t wind = ws.sensor[0].w.wind_gust_meter_sec * 10;
+    payload[16] = wind & 0xFF;
+    payload[17] = (wind >> 8) & 0xF;
+
+    uint8_t wdir = ws.sensor[0].w.wind_direction_deg / 22.5f;
+    payload[17] |= wdir << 4;
+
+    snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_avg_meter_sec);
+    payload[18] = ((buf[1] - '0') << 4) | (buf[3] - '0');
+    payload[19] = buf[0] - '0';
+
+    float temp_c = ws.sensor[0].w.temp_c; 
+    if (temp_c < 0) {
+        temp_c *= -1;
+        payload[25] = 1;
+    } else {
+        payload[25] = 0;
+    }
+
+    snprintf(buf, 7, "%04.1f", temp_c);
+    payload[20] = ((buf[1] - '0') << 4) | (buf[3] - '0');
+    payload[21] = buf[0] - '0';
+
+    snprintf(buf, 7, "%02d", ws.sensor[0].w.humidity);
+    payload[22] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+    
+    snprintf(buf, 7, "%05.1f", ws.sensor[0].w.rain_mm);
+    payload[23] = ((buf[2] - '0') << 4) | (buf[4] - '0');
+    payload[24] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+
+    payload[25] |= (ws.sensor[0].battery_ok ? 0 : 8) << 4;
 
     // Calculate checksum (number number bits set in bytes 14-25)
     uint8_t bitsSet = 0;
@@ -132,8 +175,8 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
         currentByte >>= 1;
       }
     }
-    msg[13] = bitsSet;
-    log_i("Bits set: 0x%02X", bitsSet);
+    payload[13] = bitsSet;
+    log_d("Bits set: 0x%02X", bitsSet);
 
     // First 13 bytes are inverse of last 13 bytes
     for (unsigned col = 0; col < 26 / 2; ++col) {
