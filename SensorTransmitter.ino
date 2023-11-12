@@ -65,7 +65,7 @@ void setup() {
   Serial.begin(115200);
 
   // initialize SX1276
-  Serial.print(F("[SX1276] Initializing ... "));
+  log_i("[SX1276] Initializing ... ");
   // carrier frequency:                   868.3 MHz
   // bit rate:                            8.22 kbps
   // frequency deviation:                 57.136417 kHz
@@ -76,10 +76,9 @@ void setup() {
   // Sync: 2D D4
   int state = radio.beginFSK(868.3, 8.21, 57.136417, 250, 10, 32);
   if (state == RADIOLIB_ERR_NONE) {
-    Serial.println(F("success!"));
+    log_i("success!");
   } else {
-    Serial.print(F("failed, code "));
-    Serial.println(state);
+    log_e("failed, code %d", state);
     while (true);
   }
 
@@ -204,7 +203,7 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
     // Calculate checksum (number number bits set in bytes 14-25)
     uint8_t bitsSet = 0;
 
-    for(uint8_t p = 14 ; p < 26 ; p++) {
+    for (uint8_t p = 14 ; p < 26 ; p++) {
       uint8_t currentByte = payload[p];
       while(currentByte) {
         bitsSet += (currentByte & 1);
@@ -226,7 +225,7 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
 }
 
 void loop() {
-  Serial.print(F("[SX1276] Transmitting packet ... "));
+  log_i("[SX1276] Transmitting packet ... ");
 
   uint8_t msg_buf[40];
 
@@ -234,33 +233,24 @@ void loop() {
 
   int state = radio.transmit(msg_buf, msg_size);
 
-  // you can also transmit byte array up to 256 bytes long
-  /*
-    byte byteArr[] = {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF};
-    int state = radio.transmit(byteArr, 8);
-  */
-
   if (state == RADIOLIB_ERR_NONE) {
     // the packet was successfully transmitted
-    Serial.println(F(" success!"));
+    log_i(" success!");
 
     // print measured data rate
-    Serial.print(F("[SX1276] Datarate:\t"));
-    Serial.print(radio.getDataRate());
-    Serial.println(F(" bps"));
+    log_i("[SX1276] Datarate:\t%d bps", radio.getDataRate());
 
   } else if (state == RADIOLIB_ERR_PACKET_TOO_LONG) {
     // the supplied packet was longer than 256 bytes
-    Serial.println(F("too long!"));
+    log_e("too long!");
 
   } else if (state == RADIOLIB_ERR_TX_TIMEOUT) {
     // timeout occurred while transmitting packet
-    Serial.println(F("timeout!"));
+    log_e("timeout!");
 
   } else {
     // some other error occurred
-    Serial.print(F("failed, code "));
-    Serial.println(state);
+    log_e("failed, code %d", state);
 
   }
 
