@@ -35,6 +35,7 @@
 // 20231111 Created based on 
 //          https://github.com/jgromes/RadioLib/blob/master/examples/SX127x/SX127x_Transmit_Blocking/SX127x_Transmit_Blocking.ino
 // 20231112 Added utilization of class WeatherSensor
+//          Added JSON string as payload source
 //
 // ToDo:
 // -
@@ -46,10 +47,15 @@
 
 #include <Arduino.h>
 
-#define NUM_SENSORS 1
-#define WIND_DATA_FLOATINGPOINT
+#define NUM_SENSORS 1               //!< WeatherSensor - no. of sensors
+#define WIND_DATA_FLOATINGPOINT     //!< WeatherSensor - wind data type
 
-#define TX_INTERVAL 30
+//!< Select one of the followind data sources
+//#define DATA_RAW                  //!< payload from raw data
+//#define DATA_GEN                  //!< payload from WeatherSensor::genMessage()
+#define DATA_JSON                   //!< payload from JSON string
+
+#define TX_INTERVAL 30              //!< transmit interval in seconds
 
 // ------------------------------------------------------------------------------------------------
 // --- Board ---

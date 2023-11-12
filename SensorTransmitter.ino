@@ -41,6 +41,7 @@
 //          https://github.com/jgromes/RadioLib/blob/master/examples/SX127x/SX127x_Transmit_Blocking/SX127x_Transmit_Blocking.ino
 //          Added checksum calculation
 // 20231112 Added utilization of class WeatherSensor
+//          Added JSON string as payload source
 //
 // ToDo:
 // -
@@ -50,6 +51,7 @@
 #include "SensorTransmitter.h"
 #include <RadioLib.h>
 #include "WeatherSensor.h"
+#include <ArduinoJson.h>      // https://github.com/bblanchon/ArduinoJson
 
 // SX1276 has the following connections:
 // NSS pin:   PIN_TRANSCEIVER_CS
@@ -121,14 +123,48 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
 {
     uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
     uint8_t syncword[] = {0x2D, 0xD4};
-    uint8_t payload[] = {0xEA, 0xEC, 0x7F, 0xEB, 0x5F, 0xEE, 0xEF, 0xFA, 0xFE, 0x76, 0xBB, 0xFA, 0xFF,
-                         0x15, 0x13, 0x80, 0x14, 0xA0, 0x11, 0x10, 0x05, 0x01, 0x89, 0x44, 0x05, 0x00};
+
     char buf[7];
     memcpy(msg, preamble, 4);
     memcpy(&msg[4], syncword, 2);
 
-    //log_i("SIZE: %d", sizeof(ws.sensor));
+#if defined(DATA_RAW)
+    uint8_t payload[] = {0xEA, 0xEC, 0x7F, 0xEB, 0x5F, 0xEE, 0xEF, 0xFA, 0xFE, 0x76, 0xBB, 0xFA, 0xFF,
+                         0x15, 0x13, 0x80, 0x14, 0xA0, 0x11, 0x10, 0x05, 0x01, 0x89, 0x44, 0x05, 0x00};
+
+#elif defined(DATA_JSON)
+    uint8_t payload[26];
+    StaticJsonDocument<256> doc;
+    char json[] =
+      "{\"sensor_id\":255,\"s_type\":1,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"temp_c\":12.3,\
+        \"humidity\":44,\"wind_gust_meter_sec\":3.3,\"wind_avg_meter_sec\":2.2,\"wind_direction_deg\":111.1,\
+        \"rain_mm\":123.4}";
+
+    // Deserialize the JSON document
+    DeserializationError error = deserializeJson(doc, json);
+
+    // Test if parsing succeeds.
+    if (error) {
+      log_e("DeserializeJson() failed: %s", error.f_str());
+      return 0;
+    }
+
+    ws.sensor[0].sensor_id = doc["sensor_id"];
+    ws.sensor[0].s_type = doc["s_type"];
+    ws.sensor[0].chan = doc["chan"];
+    ws.sensor[0].startup = doc["startup"];
+    ws.sensor[0].battery_ok = doc["battery_ok"];
+    ws.sensor[0].w.temp_c = doc["temp_c"];
+    ws.sensor[0].w.humidity = doc["humidity"];
+    ws.sensor[0].w.wind_gust_meter_sec = doc["wind_gust_meter_sec"];
+    ws.sensor[0].w.wind_avg_meter_sec = doc["wind_avg_meter_sec"];
+    ws.sensor[0].w.wind_direction_deg = doc["wind_direction_deg"];
+    ws.sensor[0].w.rain_mm = doc["rain_mm"];
+
+#elif defined(DATA_GEN)
+    uint8_t payload[26];
     ws.genMessage(0 /* slot */, 0xff /* id */, SENSOR_TYPE_WEATHER0 /* s_type */);
+#endif
 
     payload[14] = (uint8_t)(ws.sensor[0].sensor_id & 0xFF);
     payload[15] = ((ws.sensor[0].startup ? 0 : 8) << 4) | ws.sensor[0].s_type;
