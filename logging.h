@@ -3,7 +3,7 @@
 // 
 //  Replacement for
 //  https://github.com/espressif/arduino-esp32/blob/master/cores/esp32/esp32-hal-log.h
-//  on RP2040
+//  on RP2040 and ESP8266
 //
 // - DEBUG_RP2040_PORT is set in Arduino IDE:
 //   Tools->Debug port: "<Disabled>|<Serial>|<Serial1>|<Serial2>"
@@ -40,6 +40,7 @@
 // 20230927 Created from BresserWeatherSensorReceiver
 // 20231004 Added function names and line numbers to ESP8266/RP2040 debug logging
 // 20231005 Allowed re-definition of CORE_DEBUG_LEVEL and log_* macros
+// 20231113 Added ESP8266
 //
 // ToDo:
 // - 
@@ -49,10 +50,12 @@
 #ifndef LOGGING_H
 #define LOGGING_H
 
-#if defined(ARDUINO_ARCH_RP2040)
+#if defined(ESP8266) || defined(ARDUINO_ARCH_RP2040)
 
-    #if defined(DEBUG_RP2040_PORT)
+    #if defined(ARDUINO_ARCH_RP2040) && defined(DEBUG_RP2040_PORT)
         #define DEBUG_PORT DEBUG_RP2040_PORT
+    #elif defined(DEBUG_ESP_PORT)
+        #define DEBUG_PORT DEBUG_ESP_PORT
     #endif
 
     #define ARDUHAL_LOG_LEVEL_NONE      0
@@ -99,5 +102,5 @@
         #define log_v(...) {}
      #endif
 
-#endif // defined(ARDUINO_ARCH_RP2040)
+#endif // defined(ESP8266) || defined(ARDUINO_ARCH_RP2040)
 #endif // LOGGING_H
