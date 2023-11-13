@@ -1,4 +1,4 @@
-<!-- [![CI](https://github.com/matthias-bs/SensorTransmitter/actions/workflows/CI.yml/badge.svg)](https://github.com/matthias-bs/SensorTransmitter/actions/workflows/CI.yml) -->
+[![CI](https://github.com/matthias-bs/SensorTransmitter/actions/workflows/CI.yml/badge.svg)](https://github.com/matthias-bs/SensorTransmitter/actions/workflows/CI.yml)
 [![GitHub release](https://img.shields.io/github/release/matthias-bs/BresserWeatherSensorTTN?maxAge=3600)](https://github.com/matthias-bs/SensorTransmitter/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/matthias-bs/SensorTransmitter/blob/main/LICENSE)
 
