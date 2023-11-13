@@ -52,6 +52,7 @@
 #include "SensorTransmitter.h"
 #include <RadioLib.h>
 #include "WeatherSensor.h"
+#include "logging.h"
 #include <ArduinoJson.h>      // https://github.com/bblanchon/ArduinoJson
 
 // SX1276 has the following connections:
