@@ -33,4 +33,8 @@ Sensor Data FSK Transmitter based on SX1276 using RadioLib
 
 ## Supported Protocols
 
-
+- [x] Bresser 5-in-1
+- [ ] Bresser 6-in-1
+- [ ] Bresser 7-in-1
+- [ ] Bresser Lightning
+- [ ] Bresser Leakage
