@@ -81,10 +81,9 @@ jobs:
         if: ${{ env.run-build == 'true' }}
         run:
           |
-          #declare -a required_libs=("https://github.com/matthias-bs/BresserWeatherSensorReceiver.git"
           declare -a required_libs=(
             "RadioLib@6.2.0"
-            "BresserWeatherSensorReceiver@0.19.0"
+            "BresserWeatherSensorReceiver@0.19.5"
             "ArduinoJson@6.21.3")
           for i in "${required_libs[@]}"
           do
