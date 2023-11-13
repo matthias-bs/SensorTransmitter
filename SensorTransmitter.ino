@@ -51,8 +51,8 @@
 
 #include "SensorTransmitter.h"
 #include <RadioLib.h>
-#include "WeatherSensor.h"
 #include "logging.h"
+#include "WeatherSensor.h"
 #include <ArduinoJson.h>      // https://github.com/bblanchon/ArduinoJson
 
 // SX1276 has the following connections:
@@ -258,7 +258,7 @@ void loop() {
     log_i(" success!");
 
     // print measured data rate
-    log_i("[SX1276] Datarate:\t%d bps", radio.getDataRate());
+    log_i("[SX1276] Datarate:\t%f bps", radio.getDataRate());
 
   } else if (state == RADIOLIB_ERR_PACKET_TOO_LONG) {
     // the supplied packet was longer than 256 bytes
