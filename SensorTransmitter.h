@@ -37,6 +37,7 @@
 // 20231112 Added utilization of class WeatherSensor
 //          Added JSON string as payload source
 // 20231113 Added JSON string input from serial console
+//          Added TRANSCEIVER_CHIP
 //
 // ToDo:
 // -
@@ -181,6 +182,22 @@
 #if ( !defined(USE_CC1101) && !defined(USE_SX1276) )
     //#define USE_CC1101
     #define USE_SX1276
+#endif
+
+#if ( (defined(USE_CC1101) && defined(USE_SX1276)) || \
+      (defined(USE_SX1276) && defined(USE_SX1262)) || \
+      (defined(USE_SX1262) && defined(USE_CC1101)) )
+    #error "Either USE_CC1101 OR USE_SX1276 OR USE_SX1262 must be defined!"
+#endif
+
+#if defined(USE_CC1101)
+    #define TRANSCEIVER_CHIP "[CC1101]"
+#elif defined(USE_SX1276)
+    #define TRANSCEIVER_CHIP "[SX1276]"
+#elif defined(USE_SX1262)
+    #define TRANSCEIVER_CHIP "[SX1262]"
+#else
+    #error "Either USE_CC1101, USE_SX1276 or USE_SX1262 must be defined!"
 #endif
 
 // Arduino default SPI pins
@@ -336,7 +353,7 @@
 
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
-#pragma message("Transmitter chip: " TRANSMITTER_CHIP)
+#pragma message("Transmitter chip: " TRANSCEIVER_CHIP)
 #pragma message("Pin config: RST->" STR(PIN_TRANSCEIVER_RST) ", CS->" STR(PIN_TRANSCEIVER_CS) ", GD0/G0/IRQ->" STR(PIN_TRANSCEIVER_IRQ) ", GDO2/G1/GPIO->" STR(PIN_TRANSCEIVER_GPIO) )
 
 #endif
