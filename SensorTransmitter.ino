@@ -42,6 +42,7 @@
 //          Added checksum calculation
 // 20231112 Added utilization of class WeatherSensor
 //          Added JSON string as payload source
+// 20231113 Added JSON string input from serial console
 //
 // ToDo:
 // -
@@ -118,7 +119,7 @@ WeatherSensor ws;
 // - B = Battery. 0=Ok, 8=Low.
 // - s = startup, 0 after power-on/reset / 8 after 1 hour
 // - S = sensor type, only low nibble used, 0x9 for Bresser Professional Rain Gauge
-uint8_t encodeBresser5In1Payload(uint8_t *msg)
+uint8_t encodeBresser5In1Payload(String msg_str, uint8_t *msg)
 {
     uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
     uint8_t syncword[] = {0x2D, 0xD4};
@@ -131,10 +132,14 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
     uint8_t payload[] = {0xEA, 0xEC, 0x7F, 0xEB, 0x5F, 0xEE, 0xEF, 0xFA, 0xFE, 0x76, 0xBB, 0xFA, 0xFF,
                          0x15, 0x13, 0x80, 0x14, 0xA0, 0x11, 0x10, 0x05, 0x01, 0x89, 0x44, 0x05, 0x00};
 
-#elif defined(DATA_JSON)
+#elif defined(DATA_GEN)
     uint8_t payload[26];
-    StaticJsonDocument<256> doc;
-    char json[] =
+    ws.genMessage(0 /* slot */, 0xff /* id */, SENSOR_TYPE_WEATHER0 /* s_type */);
+
+#elif defined(DATA_JSON_CONST)
+    uint8_t payload[26];
+    StaticJsonDocument<512> doc;
+    const char json[] =
       "{\"sensor_id\":255,\"s_type\":1,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"temp_c\":12.3,\
         \"humidity\":44,\"wind_gust_meter_sec\":3.3,\"wind_avg_meter_sec\":2.2,\"wind_direction_deg\":111.1,\
         \"rain_mm\":123.4}";
@@ -142,7 +147,21 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
     // Deserialize the JSON document
     DeserializationError error = deserializeJson(doc, json);
 
-    // Test if parsing succeeds.
+#elif defined(DATA_JSON_INPUT)
+    if (!msg_str.length()) {
+      return 0;
+    }
+    
+    uint8_t payload[26];
+    StaticJsonDocument<512> doc;
+
+    // Deserialize the JSON document
+    DeserializationError error = deserializeJson(doc, msg_str.c_str());
+
+#endif
+
+#if defined(DATA_JSON_INPUT) || defined(DATA_JSON_CONST)
+    // Test if parsing succeeded
     if (error) {
       log_e("DeserializeJson() failed: %s", error.f_str());
       return 0;
@@ -159,10 +178,6 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
     ws.sensor[0].w.wind_avg_meter_sec = doc["wind_avg_meter_sec"];
     ws.sensor[0].w.wind_direction_deg = doc["wind_direction_deg"];
     ws.sensor[0].w.rain_mm = doc["rain_mm"];
-
-#elif defined(DATA_GEN)
-    uint8_t payload[26];
-    ws.genMessage(0 /* slot */, 0xff /* id */, SENSOR_TYPE_WEATHER0 /* s_type */);
 #endif
 
     payload[14] = (uint8_t)(ws.sensor[0].sensor_id & 0xFF);
@@ -225,12 +240,16 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
 }
 
 void loop() {
-  log_i("[SX1276] Transmitting packet ... ");
+  static String input_str;
+  if (Serial.available()) {
+        input_str = Serial.readStringUntil('\n');
+  }
 
   uint8_t msg_buf[40];
 
-  uint8_t msg_size = encodeBresser5In1Payload(msg_buf);
+  uint8_t msg_size = encodeBresser5In1Payload(input_str, msg_buf);
 
+  log_i("[SX1276] Transmitting packet (%d bytes)... ", msg_size);
   int state = radio.transmit(msg_buf, msg_size);
 
   if (state == RADIOLIB_ERR_NONE) {

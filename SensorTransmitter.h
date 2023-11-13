@@ -36,6 +36,7 @@
 //          https://github.com/jgromes/RadioLib/blob/master/examples/SX127x/SX127x_Transmit_Blocking/SX127x_Transmit_Blocking.ino
 // 20231112 Added utilization of class WeatherSensor
 //          Added JSON string as payload source
+// 20231113 Added JSON string input from serial console
 //
 // ToDo:
 // -
@@ -53,7 +54,8 @@
 //!< Select one of the followind data sources
 //#define DATA_RAW                  //!< payload from raw data
 //#define DATA_GEN                  //!< payload from WeatherSensor::genMessage()
-#define DATA_JSON                   //!< payload from JSON string
+//#define DATA_JSON_CONST             //!< payload from JSON constant string
+#define DATA_JSON_INPUT             //!< payload from JSON serial console input
 
 #define TX_INTERVAL 30              //!< transmit interval in seconds
 
