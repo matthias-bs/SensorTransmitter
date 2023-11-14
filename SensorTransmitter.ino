@@ -44,6 +44,7 @@
 //          Added JSON string as payload source
 // 20231113 Added JSON string input from serial console
 //          Added encodeBresserLightningPayload (DATA_RAW, DATA_GEN)
+// 20231114 Added setting of encoder and tx_interval
 //
 // ToDo:
 // -
@@ -255,7 +256,6 @@ uint8_t encodeBresser5In1Payload(String msg_str, uint8_t *msg)
   return 4 + 2 + 26;
 }
 
-
 /**
 Decoder for Bresser Lightning, outdoor sensor.
 
@@ -290,6 +290,47 @@ uint8_t encodeBresserLightningPayload(String msg_str, uint8_t *msg)
 #elif defined(DATA_GEN)
   uint8_t payload[26];
   ws.genMessage(0 /* slot */, 0xffff /* id */, SENSOR_TYPE_LIGHTNING /* s_type */);
+
+#elif defined(DATA_JSON_CONST)
+  uint8_t payload[26];
+  StaticJsonDocument<256> doc;
+  const char json[] =
+      "{\"sensor_id\":65535,\"s_type\":9,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"strike_count\":22,\
+        \"distance_km\":44}";
+
+  // Deserialize the JSON document
+  DeserializationError error = deserializeJson(doc, json);
+
+#elif defined(DATA_JSON_INPUT)
+  if (!msg_str.length())
+  {
+    return 0;
+  }
+
+  uint8_t payload[26];
+  StaticJsonDocument<256> doc;
+
+  // Deserialize the JSON document
+  DeserializationError error = deserializeJson(doc, msg_str.c_str());
+
+#endif
+
+#if defined(DATA_JSON_INPUT) || defined(DATA_JSON_CONST)
+  // Test if parsing succeeded
+  if (error)
+  {
+    log_e("DeserializeJson() failed: %s", error.f_str());
+    return 0;
+  }
+
+  ws.sensor[0].sensor_id = doc["sensor_id"];
+  ws.sensor[0].s_type = doc["s_type"];
+  ws.sensor[0].chan = doc["chan"];
+  ws.sensor[0].startup = doc["startup"];
+  ws.sensor[0].battery_ok = doc["battery_ok"];
+  ws.sensor[0].lgt.strike_count = doc["strike_count"];
+  ws.sensor[0].lgt.distance_km = doc["distance_km"];
+
 #endif
 
 #if !defined(DATA_RAW)
@@ -300,14 +341,16 @@ uint8_t encodeBresserLightningPayload(String msg_str, uint8_t *msg)
   payload[4] = ws.sensor[0].lgt.strike_count >> 4;
   payload[5] = ws.sensor[0].lgt.strike_count << 4;
 
-  if (!ws.sensor[0].battery_ok) {
+  if (!ws.sensor[0].battery_ok)
+  {
     payload[5] |= 8;
   }
   payload[5] ^= 0xA;
 
   payload[6] = (SENSOR_TYPE_LIGHTNING << 4);
-  
-  if (!ws.sensor[0].startup) {
+
+  if (!ws.sensor[0].startup)
+  {
     payload[6] |= 8;
   }
   payload[6] ^= 0xAA;
@@ -316,16 +359,18 @@ uint8_t encodeBresserLightningPayload(String msg_str, uint8_t *msg)
 
   payload[8] = 0;
   payload[9] = 0;
+
 #endif
 
   int crc = crc16(&payload[2], 7, 0x1021 /* polynomial */, 0 /* init */);
-  log_i("CRC: %0x", crc);
+  log_d("CRC: 0x%04X", crc);
   crc ^= 0x899e;
 
   payload[0] = ((crc >> 8) & 0xFF);
   payload[1] = crc & 0xFF;
 
-  for (int i=0; i<10; i++) {
+  for (int i = 0; i < 10; i++)
+  {
     payload[i] ^= 0xAA;
   }
 
@@ -337,16 +382,70 @@ uint8_t encodeBresserLightningPayload(String msg_str, uint8_t *msg)
 
 void loop()
 {
-  static String input_str;
+  String input_str;
+  static String json_str;
+  static Encoders encoder = ENC_BRESSER_5IN1;
+  static unsigned tx_interval = TX_INTERVAL;
+
   if (Serial.available())
   {
     input_str = Serial.readStringUntil('\n');
   }
 
-  uint8_t msg_buf[40];
+  if (input_str.startsWith("{"))
+  {
+    json_str = input_str;
+    log_i("JSON String: %s", json_str.c_str());
+  }
+  else if (input_str.startsWith("enc"))
+  {
+    if (int pos = input_str.indexOf('='))
+    {
+      input_str.toLowerCase();
+      if (input_str.substring(pos + 1).startsWith("bresser-5in1"))
+      {
+        encoder = ENC_BRESSER_5IN1;
+        log_i("Encoder: Bresser 5-in-1");
+      }
+      else if (input_str.substring(pos + 1).startsWith("bresser-lightning"))
+      {
+        encoder = ENC_BRESSER_LIGHTNING;
+        log_i("Encoder: Bresser Lightning");
+      }
+      else
+      {
+        log_w("Unknown encoder!");
+      }
+    }
+  } // "enc[oder]"
+  else if (input_str.startsWith("int")) {
+    if (int pos = input_str.indexOf('='))
+    {
+      int val = input_str.substring(pos + 1).toInt();
+      if (val > 10) {
+        tx_interval = val;
+        log_i("tx_interval: %d s", tx_interval);
+      }
+    }
+  } // "int[erval]"
+  else /* if (input_str != "") */
+  {
+    log_w("Unknown command!");
+  }
 
-  //uint8_t msg_size = encodeBresser5In1Payload(input_str, msg_buf);
-  uint8_t msg_size = encodeBresserLightningPayload(input_str, msg_buf);
+  uint8_t msg_buf[40];
+  uint8_t msg_size;
+
+  switch (encoder)
+  {
+  case ENC_BRESSER_5IN1:
+    msg_size = encodeBresser5In1Payload(json_str, msg_buf);
+    break;
+
+  case ENC_BRESSER_LIGHTNING:
+    msg_size = encodeBresserLightningPayload(json_str, msg_buf);
+    break;
+  }
 
   log_i("[SX1276] Transmitting packet (%d bytes)... ", msg_size);
   int state = radio.transmit(msg_buf, msg_size);
@@ -376,52 +475,32 @@ void loop()
   }
 
   // wait for TX_INTERVAL seconds before transmitting again
-  delay(TX_INTERVAL * 1000);
+  delay(tx_interval * 1000);
 }
 
-//
-// From from rtl_433 project - https://github.com/merbanan/rtl_433/blob/master/src/util.c
-//
-uint16_t lfsr_digest16(uint8_t const message[], unsigned bytes, uint16_t gen, uint16_t key)
-{
-    uint16_t sum = 0;
-    for (unsigned k = 0; k < bytes; ++k) {
-        uint8_t data = message[k];
-        for (int i = 7; i >= 0; --i) {
-            // fprintf(stderr, "key at bit %d : %04x\n", i, key);
-            // if data bit is set then xor with key
-            if ((data >> i) & 1)
-                sum ^= key;
-
-            // roll the key right (actually the lsb is dropped here)
-            // and apply the gen (needs to include the dropped lsb as msb)
-            if (key & 1)
-                key = (key >> 1) ^ gen;
-            else
-                key = (key >> 1);
-        }
-    }
-    return sum;
-}
 
 //
 // From from rtl_433 project - https://github.com/merbanan/rtl_433/blob/master/src/util.c
 //
 uint16_t crc16(uint8_t const message[], unsigned nBytes, uint16_t polynomial, uint16_t init)
 {
-    uint16_t remainder = init;
-    unsigned byte, bit;
+  uint16_t remainder = init;
+  unsigned byte, bit;
 
-    for (byte = 0; byte < nBytes; ++byte) {
-        remainder ^= message[byte] << 8;
-        for (bit = 0; bit < 8; ++bit) {
-            if (remainder & 0x8000) {
-                remainder = (remainder << 1) ^ polynomial;
-            }
-            else {
-                remainder = (remainder << 1);
-            }
-        }
+  for (byte = 0; byte < nBytes; ++byte)
+  {
+    remainder ^= message[byte] << 8;
+    for (bit = 0; bit < 8; ++bit)
+    {
+      if (remainder & 0x8000)
+      {
+        remainder = (remainder << 1) ^ polynomial;
+      }
+      else
+      {
+        remainder = (remainder << 1);
+      }
     }
-    return remainder;
+  }
+  return remainder;
 }

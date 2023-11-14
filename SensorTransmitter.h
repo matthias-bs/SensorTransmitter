@@ -38,6 +38,7 @@
 //          Added JSON string as payload source
 // 20231113 Added JSON string input from serial console
 //          Added TRANSCEIVER_CHIP
+// 20231114 Added enum Encoders
 //
 // ToDo:
 // -
@@ -59,6 +60,10 @@
 #define DATA_JSON_INPUT             //!< payload from JSON serial console input
 
 #define TX_INTERVAL 30              //!< transmit interval in seconds
+
+typedef enum Encoders {
+    ENC_BRESSER_5IN1, ENC_BRESSER_6IN1, ENC_BRESSER_7IN1, ENC_BRESSER_LEAKAGE, ENC_BRESSER_LIGHTNING
+} Encoders;
 
 // ------------------------------------------------------------------------------------------------
 // --- Board ---
