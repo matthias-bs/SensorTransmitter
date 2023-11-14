@@ -14,7 +14,17 @@ This project is closely related to [BresserWeatherSensorReceiver](https://github
 * Emulation of sensors while replacing the data with entirely different sensor values,
   e.g. using the manufacturer's temperature sensor protocol to display snow depth instead. 
 
+## Supported Protocols
+
+- [x] Bresser 5-in-1
+- [ ] Bresser 6-in-1
+- [ ] Bresser 7-in-1
+- [x] Bresser Lightning
+- [ ] Bresser Leakage
+
 ## Sensor Data Provisioning Options
+
+Select option in [SensorTransmitter.h](SensorTransmitter.h).
 
 1. Raw Data
    ```
@@ -22,24 +32,35 @@ This project is closely related to [BresserWeatherSensorReceiver](https://github
                          0x15, 0x13, 0x80, 0x14, 0xA0, 0x11, 0x10, 0x05, 0x01, 0x89, 0x44, 0x05, 0x00};
    ```
 2. [class WeatherSensor](https://github.com/matthias-bs/BresserWeatherSensorReceiver/blob/main/src/WeatherSensor.h)
-3. JSON Data as Input from Serial Console
+3. JSON Data as Constant String
    
-   ```
-   {"sensor_id": 255, "s_type": 1, "chan": 0, "startup": 0, "battery_ok": 1, "temp_c": 12.3, "humidity": 44, "wind_gust_meter_sec": 3.3, "wind_avg_meter_sec": 2.2, "wind_direction_deg": 111.1, "rain_mm": 123.4}
-   ```
-   
-4. JSON Data as Constant String
    ```
    const char json[] =
       "{\"sensor_id\":255,\"s_type\":1,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"temp_c\":12.3,\
         \"humidity\":44,\"wind_gust_meter_sec\":3.3,\"wind_avg_meter_sec\":2.2,\"wind_direction_deg\":111.1,\
         \"rain_mm\":123.4}";
    ```
+   
+4. JSON Data as Input from Serial Console
 
-## Supported Protocols
+   Example 1: Bresser 5-in-1
 
-- [x] Bresser 5-in-1
-- [ ] Bresser 6-in-1
-- [ ] Bresser 7-in-1
-- [ ] Bresser Lightning
-- [ ] Bresser Leakage
+   ```
+   {"sensor_id": 255, "s_type": 1, "chan": 0, "startup": 0, "battery_ok": 1, "temp_c": 12.3, "humidity": 44, "wind_gust_meter_sec": 3.3, "wind_avg_meter_sec": 2.2, "wind_direction_deg": 111.1, "rain_mm": 123.4}
+   ```
+
+   Example 2: Bresser Lightning
+
+   ```
+   {"sensor_id": 65535, "s_type": 9, "chan": 0, "startup": 0, "battery_ok": 1, "strike_count": 11, "distance_km": 7}
+   ```
+
+## Serial Port Control
+
+**Note:** No additional spaces are allowed in commands! (But spaces are permitted in JSON strings.)
+
+| Command                 | Examples                                      | Description           |
+| ----------------------- | --------------------------------------------- | --------------------- |
+| `{...}`                 | see above                                     | Set JSON message data |  
+| `enc[oder]=<encoder>`   | `enc=bresser-5in1`<br>`enc=bresser-lightning` | Select encoder        |
+| `int[erval]=<interval>` | `int=20`                                      | Set transmit interval in seconds<br>(must be > 10) |
