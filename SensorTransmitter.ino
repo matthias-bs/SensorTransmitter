@@ -279,7 +279,6 @@ uint8_t encodeBresserLightningPayload(String msg_str, uint8_t *msg)
   uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
   uint8_t syncword[] = {0x2D, 0xD4};
 
-  char buf[7];
   memcpy(msg, preamble, 4);
   memcpy(&msg[4], syncword, 2);
 
@@ -418,16 +417,18 @@ void loop()
       }
     }
   } // "enc[oder]"
-  else if (input_str.startsWith("int")) {
+  else if (input_str.startsWith("int"))
+  {
     if (int pos = input_str.indexOf('='))
     {
       int val = input_str.substring(pos + 1).toInt();
-      if (val > 10) {
+      if (val > 10)
+      {
         tx_interval = val;
         log_i("tx_interval: %d s", tx_interval);
       }
     }
-  } // "int[erval]"
+  }    // "int[erval]"
   else /* if (input_str != "") */
   {
     log_w("Unknown command!");
@@ -445,6 +446,10 @@ void loop()
   case ENC_BRESSER_LIGHTNING:
     msg_size = encodeBresserLightningPayload(json_str, msg_buf);
     break;
+
+  default:
+    log_e("Encoder not implemented!");
+    msg_size = 0;
   }
 
   log_i("[SX1276] Transmitting packet (%d bytes)... ", msg_size);
@@ -477,7 +482,6 @@ void loop()
   // wait for TX_INTERVAL seconds before transmitting again
   delay(tx_interval * 1000);
 }
-
 
 //
 // From from rtl_433 project - https://github.com/merbanan/rtl_433/blob/master/src/util.c
