@@ -439,7 +439,7 @@ void loop()
       }
     }
   }    // "int[erval]"
-  else /* if (input_str != "") */
+  else if (input_str != "")
   {
     log_w("Unknown command!");
   }
