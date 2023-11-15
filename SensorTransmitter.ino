@@ -45,6 +45,7 @@
 // 20231113 Added JSON string input from serial console
 //          Added encodeBresserLightningPayload (DATA_RAW, DATA_GEN)
 // 20231114 Added setting of encoder and tx_interval
+// 20231115 Added support of CC1101 transceiver
 //
 // ToDo:
 // -
@@ -57,28 +58,37 @@
 #include "WeatherSensor.h"
 #include <ArduinoJson.h> // https://github.com/bblanchon/ArduinoJson
 
+#if defined(USE_CC1101)
+CC1101 radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, RADIOLIB_NC, PIN_TRANSCEIVER_GPIO);
+#endif
+#if defined(USE_SX1276)
 // SX1276 has the following connections:
 // NSS pin:   PIN_TRANSCEIVER_CS
 // DIO0 pin:  PIN_TRANSCEIVER_IRQ
 // RESET pin: PIN_TRANSCEIVER_RST
 // DIO1 pin:  PIN_TRANSCEIVER_GPIO
 SX1276 radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, PIN_TRANSCEIVER_RST, PIN_TRANSCEIVER_GPIO);
+#endif
 
 void setup()
 {
   Serial.begin(115200);
 
   // initialize SX1276
-  log_i("[SX1276] Initializing ... ");
-  // carrier frequency:                   868.3 MHz
-  // bit rate:                            8.22 kbps
-  // frequency deviation:                 57.136417 kHz
-  // Rx bandwidth:                        270.0 kHz (CC1101) / 250 kHz (SX1276)
-  // output power:                        10 dBm
-  // preamble length:                     40 bits
-  // Preamble: AA AA AA AA AA
-  // Sync: 2D D4
+  log_i("%s Initializing ... ", TRANSCEIVER_CHIP);
+// carrier frequency:                   868.3 MHz
+// bit rate:                            8.22 kbps
+// frequency deviation:                 57.136417 kHz
+// Rx bandwidth:                        270.0 kHz (CC1101) / 250 kHz (SX1276)
+// output power:                        10 dBm
+// preamble length:                     40 bits
+// Preamble: AA AA AA AA AA
+// Sync: 2D D4
+#ifdef USE_CC1101
+  int state = radio.begin(868.3, 8.21, 57.136417, 270, 10, 32);
+#else
   int state = radio.beginFSK(868.3, 8.21, 57.136417, 250, 10, 32);
+#endif
   if (state == RADIOLIB_ERR_NONE)
   {
     log_i("success!");
@@ -452,7 +462,7 @@ void loop()
     msg_size = 0;
   }
 
-  log_i("[SX1276] Transmitting packet (%d bytes)... ", msg_size);
+  log_i("%s Transmitting packet (%d bytes)... ", TRANSCEIVER_CHIP, msg_size);
   int state = radio.transmit(msg_buf, msg_size);
 
   if (state == RADIOLIB_ERR_NONE)
@@ -460,8 +470,10 @@ void loop()
     // the packet was successfully transmitted
     log_i(" success!");
 
+#if defined(USE_SX1276)
     // print measured data rate
-    log_i("[SX1276] Datarate:\t%f bps", radio.getDataRate());
+    log_i("%s Datarate:\t%f bps", TRANSCEIVER_CHIP, radio.getDataRate());
+#endif
   }
   else if (state == RADIOLIB_ERR_PACKET_TOO_LONG)
   {
