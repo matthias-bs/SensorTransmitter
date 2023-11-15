@@ -4,7 +4,7 @@
 
 # SensorTransmitter
 
-Sensor Data FSK Transmitter based on SX1276 using RadioLib
+Sensor Data FSK Transmitter based on SX1276 or CC1101 using RadioLib
 
 This project is closely related to [BresserWeatherSensorReceiver](https://github.com/matthias-bs/BresserWeatherSensorReceiver)
 
