@@ -46,6 +46,7 @@
 //          Added encodeBresserLightningPayload (DATA_RAW, DATA_GEN)
 // 20231114 Added setting of encoder and tx_interval
 // 20231115 Added support of CC1101 transceiver
+//          Added encodeBresser<6In1|7In1|Leakage>Payload() - only raw data input!
 //
 // ToDo:
 // -
@@ -266,6 +267,145 @@ uint8_t encodeBresser5In1Payload(String msg_str, uint8_t *msg)
   return 4 + 2 + 26;
 }
 
+//
+// From from rtl_433 project - https://github.com/merbanan/rtl_433/blob/master/src/devices/bresser_6in1.c (20220608)
+//
+// - also Bresser Weather Center 7-in-1 indoor sensor.
+// - also Bresser new 5-in-1 sensors.
+// - also Froggit WH6000 sensors.
+// - also rebranded as Ventus C8488A (W835)
+// - also Bresser 3-in-1 Professional Wind Gauge / Anemometer PN 7002531
+// - also Bresser Pool / Spa Thermometer PN 7009973 (s_type = 3)
+//
+// There are at least two different message types:
+// - 24 seconds interval for temperature, hum, uv and rain (alternating messages)
+// - 12 seconds interval for wind data (every message)
+//
+// Also Bresser Explore Scientific SM60020 Soil moisture Sensor.
+// https://www.bresser.de/en/Weather-Time/Accessories/EXPLORE-SCIENTIFIC-Soil-Moisture-and-Soil-Temperature-Sensor.html
+//
+// Moisture:
+//
+//     f16e 187000e34 7 ffffff0000 252 2 16 fff 004 000 [25,2, 99%, CH 7]
+//     DIGEST:8h8h ID?8h8h8h8h TYPE:4h STARTUP:1b CH:3d 8h 8h8h 8h8h TEMP:12h ?2b BATT:1b ?1b MOIST:8h UV?~12h ?4h CHKSUM:8h
+//
+// Moisture is transmitted in the humidity field as index 1-16: 0, 7, 13, 20, 27, 33, 40, 47, 53, 60, 67, 73, 80, 87, 93, 99.
+// The Wind speed and direction fields decode to valid zero but we exclude them from the output.
+//
+//     aaaa2dd4e3ae1870079341ffffff0000221201fff279 [Batt ok]
+//     aaaa2dd43d2c1870079341ffffff0000219001fff2fc [Batt low]
+//
+//     {206}55555555545ba83e803100058631ff11fe6611ffffffff01cc00 [Hum 96% Temp 3.8 C Wind 0.7 m/s]
+//     {205}55555555545ba999263100058631fffffe66d006092bffe0cff8 [Hum 95% Temp 3.0 C Wind 0.0 m/s]
+//     {199}55555555545ba840523100058631ff77fe668000495fff0bbe [Hum 95% Temp 3.0 C Wind 0.4 m/s]
+//     {205}55555555545ba94d063100058631fffffe665006092bffe14ff8
+//     {206}55555555545ba860703100058631fffffe6651ffffffff0135fc [Hum 95% Temp 3.0 C Wind 0.0 m/s]
+//     {205}55555555545ba924d23100058631ff99fe68b004e92dffe073f8 [Hum 96% Temp 2.7 C Wind 0.4 m/s]
+//     {202}55555555545ba813403100058631ff77fe6810050929ffe1180 [Hum 94% Temp 2.8 C Wind 0.4 m/s]
+//     {205}55555555545ba98be83100058631fffffe6130050929ffe17800 [Hum 95% Temp 2.8 C Wind 0.8 m/s]
+//
+//     2dd4  1f 40 18 80 02 c3 18 ff 88 ff 33 08 ff ff ff ff 80 e6 00 [Hum 96% Temp 3.8 C Wind 0.7 m/s]
+//     2dd4  cc 93 18 80 02 c3 18 ff ff ff 33 68 03 04 95 ff f0 67 3f [Hum 95% Temp 3.0 C Wind 0.0 m/s]
+//     2dd4  20 29 18 80 02 c3 18 ff bb ff 33 40 00 24 af ff 85 df    [Hum 95% Temp 3.0 C Wind 0.4 m/s]
+//     2dd4  a6 83 18 80 02 c3 18 ff ff ff 33 28 03 04 95 ff f0 a7 3f
+//     2dd4  30 38 18 80 02 c3 18 ff ff ff 33 28 ff ff ff ff 80 9a 7f [Hum 95% Temp 3.0 C Wind 0.0 m/s]
+//     2dd4  92 69 18 80 02 c3 18 ff cc ff 34 58 02 74 96 ff f0 39 3f [Hum 96% Temp 2.7 C Wind 0.4 m/s]
+//     2dd4  09 a0 18 80 02 c3 18 ff bb ff 34 08 02 84 94 ff f0 8c 0  [Hum 94% Temp 2.8 C Wind 0.4 m/s]
+//     2dd4  c5 f4 18 80 02 c3 18 ff ff ff 30 98 02 84 94 ff f0 bc 00 [Hum 95% Temp 2.8 C Wind 0.8 m/s]
+//
+//     {147} 5e aa 18 80 02 c3 18 fa 8f fb 27 68 11 84 81 ff f0 72 00 [Temp 11.8 C  Hum 81%]
+//     {149} ae d1 18 80 02 c3 18 fa 8d fb 26 78 ff ff ff fe 02 db f0
+//     {150} f8 2e 18 80 02 c3 18 fc c6 fd 26 38 11 84 81 ff f0 68 00 [Temp 11.8 C  Hum 81%]
+//     {149} c4 7d 18 80 02 c3 18 fc 78 fd 29 28 ff ff ff fe 03 97 f0
+//     {149} 28 1e 18 80 02 c3 18 fb b7 fc 26 58 ff ff ff fe 02 c3 f0
+//     {150} 21 e8 18 80 02 c3 18 fb 9c fc 33 08 11 84 81 ff f0 b7 f8 [Temp 11.8 C  Hum 81%]
+//     {149} 83 ae 18 80 02 c3 18 fc 78 fc 29 28 ff ff ff fe 03 98 00
+//     {150} 5c e4 18 80 02 c3 18 fb ba fc 26 98 11 84 81 ff f0 16 00 [Temp 11.8 C  Hum 81%]
+//     {148} d0 bd 18 80 02 c3 18 f9 ad fa 26 48 ff ff ff fe 02 ff f0
+//
+// Wind and Temperature/Humidity or Rain:
+//
+//     DIGEST:8h8h ID:8h8h8h8h TYPE:4h STARTUP:1b CH:3d WSPEED:~8h~4h ~4h~8h WDIR:12h ?4h TEMP:8h.4h ?2b BATT:1b ?1b HUM:8h UV?~12h ?4h CHKSUM:8h
+//     DIGEST:8h8h ID:8h8h8h8h TYPE:4h STARTUP:1b CH:3d WSPEED:~8h~4h ~4h~8h WDIR:12h ?4h RAINFLAG:8h RAIN:8h8h UV:8h8h CHKSUM:8h
+//
+// Digest is LFSR-16 gen 0x8810 key 0x5412, excluding the add-checksum and trailer.
+// Checksum is 8-bit add (with carry) to 0xff.
+//
+// Notes on different sensors:
+//
+// - 1910 084d 18 : RebeckaJohansson, VENTUS W835
+// - 2030 088d 10 : mvdgrift, Wi-Fi Colour Weather Station with 5in1 Sensor, Art.No.: 7002580, ff 01 in the UV field is (obviously) invalid.
+// - 1970 0d57 18 : danrhjones, bresser 5-in-1 model 7002580, no UV
+// - 18b0 0301 18 : konserninjohtaja 6-in-1 outdoor sensor
+// - 18c0 0f10 18 : rege245 BRESSER-PC-Weather-station-with-6-in-1-outdoor-sensor
+// - 1880 02c3 18 : f4gqk 6-in-1
+// - 18b0 0887 18 : npkap
+uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
+{
+  uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
+  uint8_t syncword[] = {0x2D, 0xD4};
+
+  char buf[7];
+  memcpy(msg, preamble, 4);
+  memcpy(&msg[4], syncword, 2);
+
+  uint8_t payload[] = {0x2A, 0xAF, 0x21, 0x10, 0x34, 0x27, 0x18, 0xFF, 0xAA, 0xFF, 0x29, 0x28, 0xFF,
+                       0xBB, 0x89, 0xFF, 0x01, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+
+  memcpy(&msg[6], payload, 26);
+
+  // Return message size
+  return 4 + 2 + 26;
+}
+
+//
+// From from rtl_433 project - https://github.com/merbanan/rtl_433/blob/master/src/devices/bresser_7in1.c (20230215)
+//
+/**
+Decoder for Bresser Weather Center 7-in-1, outdoor sensor.
+See https://github.com/merbanan/rtl_433/issues/1492
+Preamble:
+    aa aa aa aa aa 2d d4
+Observed length depends on reset_limit.
+The data has a whitening of 0xaa.
+
+Weather Center
+Data layout:
+    {271}631d05c09e9a18abaabaaaaaaaaa8adacbacff9cafcaaaaaaa000000000000000000
+    {262}10b8b4a5a3ca10aaaaaaaaaaaaaa8bcacbaaaa2aaaaaaaaaaa0000000000000000 [0.08 klx]
+    {220}543bb4a5a3ca10aaaaaaaaaaaaaa8bcacbaaaa28aaaaaaaaaa00000 [0.08 klx]
+    {273}2492b4a5a3ca10aaaaaaaaaaaaaa8bdacbaaaa2daaaaaaaaaa0000000000000000000 [0.08klx]
+    {269}9a59b4a5a3da10aaaaaaaaaaaaaa8bdac8afea28a8caaaaaaa000000000000000000 [54.0 klx UV=2.6]
+    {230}fe15b4a5a3da10aaaaaaaaaaaaaa8bdacbba382aacdaaaaaaa00000000 [109.2klx   UV=6.7]
+    {254}2544b4a5a32a10aaaaaaaaaaaaaa8bdac88aaaaabeaaaaaaaa00000000000000 [200.000 klx UV=14
+    DIGEST:8h8h ID?8h8h WDIR:8h4h 4h STYPE:4h STARTUP:1b CH:3d WGUST:8h.4h WAVG:8h.4h RAIN:8h8h4h.4h RAIN?:8h TEMP:8h.4hC FLAGS?:4h HUM:8h% LIGHT:8h4h,8h4hKL UV:8h.4h TRAILER:8h8h8h4h
+Unit of light is kLux (not W/m²).
+
+Air Quality Sensor PM2.5 / PM10 Sensor (PN 7009970)
+Data layout:
+DIGEST:8h8h ID?8h8h ?8h8h STYPE:4h STARTUP:1b CH:3b ?8h 4h ?4h8h4h PM_2_5:4h8h4h PM10:4h8h4h ?4h ?8h4h BATT:1b ?3b ?8h8h8h8h8h8h TRAILER:8h8h8h
+
+STYPE, STARTUP and CH are not covered by whitening. Probably also ID.
+First two bytes are an LFSR-16 digest, generator 0x8810 key 0xba95 with a final xor 0x6df1, which likely means we got that wrong.
+*/
+uint8_t encodeBresser7In1Payload(String msg_str, uint8_t *msg)
+{
+  uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
+  uint8_t syncword[] = {0x2D, 0xD4};
+
+  char buf[7];
+  memcpy(msg, preamble, 4);
+  memcpy(&msg[4], syncword, 2);
+
+  uint8_t payload[] = {0xC4, 0xD6, 0x3A, 0xC5, 0xBD, 0xFA, 0x18, 0xAA, 0xAA, 0xAA, 0xAA, 0xAB, 0xFC,
+                       0xAA, 0x98, 0xDA, 0x89, 0xA3, 0x2F, 0xEC, 0xAF, 0x9A, 0xAA, 0xAA, 0xAA, 0x00};
+
+  memcpy(&msg[6], payload, 26);
+
+  // Return message size
+  return 4 + 2 + 26;
+}
+
 /**
 Decoder for Bresser Lightning, outdoor sensor.
 
@@ -389,6 +529,67 @@ uint8_t encodeBresserLightningPayload(String msg_str, uint8_t *msg)
   return 4 + 2 + 10;
 }
 
+/**
+ * Decoder for Bresser Water Leakage outdoor sensor
+ *
+ * https://github.com/matthias-bs/BresserWeatherSensorReceiver/issues/77
+ * 
+ * Preamble: aa aa 2d d4
+ * 
+ * hhhh ID:hhhhhhhh TYPE:4d NSTARTUP:b CH:3d ALARM:b NALARM:b BATT:bb FLAGS:bbbb hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
+ * 
+ * Examples:
+ * ---------
+ * [Bresser Water Leakage Sensor, PN 7009975]
+ * 
+ *[00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25]
+ * 
+ * C7 70 35 97 04 08 57 70 00 00 00 00 00 00 00 00 03 FF FF FF FF FF FF FF FF FF [CH7]
+ * DF 7D 36 49 27 09 56 70 00 00 00 00 00 00 00 00 03 FF FF FF FF FF FF FF FF FF [CH6]
+ * 9E 30 79 84 33 06 55 70 00 00 00 00 00 00 00 00 03 FF FD DF FF BF FF DF FF FF [CH5]
+ * 37 D8 57 19 73 02 51 70 00 00 00 00 00 00 00 00 03 FF FF FF FF FF BF FF EF FB [set CH4, received CH1 -> switch not positioned correctly]
+ * E2 C8 68 27 91 24 54 70 00 00 00 00 00 00 00 00 03 FF FF FF FF FF FF FF FF FF [CH4]
+ * B3 DA 55 57 17 40 53 70 00 00 00 00 00 00 00 00 03 FF FF FF FF FF FF FF FF FB [CH3]
+ * 37 FA 84 73 03 02 52 70 00 00 00 00 00 00 00 00 03 FF FF FF DF FF FF FF FF FF [CH2]
+ * 27 F3 80 02 52 88 51 70 00 00 00 00 00 00 00 00 03 FF FF FF FF FF DF FF FF FF [CH1]
+ * A6 FB 80 02 52 88 59 70 00 00 00 00 00 00 00 00 03 FD F7 FF FF BF FF FF FF FF [CH1+NSTARTUP]
+ * A6 FB 80 02 52 88 59 B0 00 00 00 00 00 00 00 00 03 FF FF FF FD FF F7 FF FF FF [CH1+NSTARTUP+ALARM]
+ * A6 FB 80 02 52 88 59 70 00 00 00 00 00 00 00 00 03 FF FF BF F7 F7 FD 7F FF FF [CH1+NSTARTUP]
+ * [Reset]
+ * C0 10 36 79 37 09 51 70 00 00 00 00 00 00 00 00 01 1E FD FD FF FF FF DF FF FF [CH1]
+ * C0 10 36 79 37 09 51 B0 00 00 00 00 00 00 00 00 03 FE FD FF AF FF FF FF FF FD [CH1+ALARM]
+ * [Reset]
+ * 71 9C 54 81 72 09 51 40 00 00 00 00 00 00 00 00 0F FF FF FF FF FF FF DF FF FE [CH1+BATT_LO]
+ * 71 9C 54 81 72 09 51 40 00 00 00 00 00 00 00 00 0F FE FF FF FF FF FB FF FF FF
+ * 71 9C 54 81 72 09 51 40 00 00 00 00 00 00 00 00 07 FD F7 FF DF FF FF DF FF FF
+ * 71 9C 54 81 72 09 51 80 00 00 00 00 00 00 00 00 1F FF FF F7 FF FF FF FF FF FF [CH1+BATT_LO+ALARM]
+ * F0 94 54 81 72 09 59 40 00 00 00 00 00 00 00 00 0F FF DF FF FF FF FF BF FD F7 [CH1+BATT_LO+NSTARTUP]
+ * F0 94 54 81 72 09 59 80 00 00 00 00 00 00 00 00 03 FF B7 FF ED FF FF FF DF FF [CH1+BATT_LO+NSTARTUP+ALARM]
+ * 
+ * - The actual message length is not known (probably 16 or 17 bytes)
+ * - The first two bytes are presumably a checksum/crc/digest; algorithm still to be found
+ * - The ID changes on power-up/reset
+ * - NSTARTUP changes from 0 to 1 approx. one hour after power-on/reset
+ */
+uint8_t encodeBresserLeakagePayload(String msg_str, uint8_t *msg)
+{
+  uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
+  uint8_t syncword[] = {0x2D, 0xD4};
+
+  char buf[7];
+  memcpy(msg, preamble, 4);
+  memcpy(&msg[4], syncword, 2);
+
+  uint8_t payload[] = {0xB3, 0xDA, 0x55, 0x57, 0x17, 0x40, 0x53, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00, 
+                       0x00, 0x00, 0x00, 0x03, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFB};
+
+  memcpy(&msg[6], payload, 26);
+
+  // Return message size
+  return 4 + 2 + 26;
+}
+
+
 void loop()
 {
   String input_str;
@@ -416,11 +617,30 @@ void loop()
         encoder = ENC_BRESSER_5IN1;
         log_i("Encoder: Bresser 5-in-1");
       }
+      else if (input_str.substring(pos + 1).startsWith("bresser-6in1"))
+      {
+        encoder = ENC_BRESSER_6IN1;
+        log_i("Encoder: Bresser 6-in-1");
+        log_w("This encoder can currently only send raw data!");
+      }
+      else if (input_str.substring(pos + 1).startsWith("bresser-7in1"))
+      {
+        encoder = ENC_BRESSER_7IN1;
+        log_i("Encoder: Bresser 7-in-1");
+        log_w("This encoder can currently only send raw data!");
+      }
       else if (input_str.substring(pos + 1).startsWith("bresser-lightning"))
       {
         encoder = ENC_BRESSER_LIGHTNING;
         log_i("Encoder: Bresser Lightning");
       }
+      else if (input_str.substring(pos + 1).startsWith("bresser-leakage"))
+      {
+        encoder = ENC_BRESSER_LEAKAGE;
+        log_i("Encoder: Bresser Leakage");
+        log_w("This encoder can currently only send raw data!");
+      }
+
       else
       {
         log_w("Unknown encoder!");
@@ -438,7 +658,7 @@ void loop()
         log_i("tx_interval: %d s", tx_interval);
       }
     }
-  }    // "int[erval]"
+  } // "int[erval]"
   else if (input_str != "")
   {
     log_w("Unknown command!");
@@ -453,8 +673,20 @@ void loop()
     msg_size = encodeBresser5In1Payload(json_str, msg_buf);
     break;
 
+  case ENC_BRESSER_6IN1:
+    msg_size = encodeBresser6In1Payload(json_str, msg_buf);
+    break;
+
+  case ENC_BRESSER_7IN1:
+    msg_size = encodeBresser7In1Payload(json_str, msg_buf);
+    break;
+
   case ENC_BRESSER_LIGHTNING:
     msg_size = encodeBresserLightningPayload(json_str, msg_buf);
+    break;
+  
+  case ENC_BRESSER_LEAKAGE:
+    msg_size = encodeBresserLeakagePayload(json_str, msg_buf);
     break;
 
   default:
