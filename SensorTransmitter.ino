@@ -345,7 +345,6 @@ uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
   uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
   uint8_t syncword[] = {0x2D, 0xD4};
 
-  char buf[7];
   memcpy(msg, preamble, 4);
   memcpy(&msg[4], syncword, 2);
 
@@ -393,7 +392,6 @@ uint8_t encodeBresser7In1Payload(String msg_str, uint8_t *msg)
   uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
   uint8_t syncword[] = {0x2D, 0xD4};
 
-  char buf[7];
   memcpy(msg, preamble, 4);
   memcpy(&msg[4], syncword, 2);
 
@@ -576,7 +574,6 @@ uint8_t encodeBresserLeakagePayload(String msg_str, uint8_t *msg)
   uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
   uint8_t syncword[] = {0x2D, 0xD4};
 
-  char buf[7];
   memcpy(msg, preamble, 4);
   memcpy(&msg[4], syncword, 2);
 
