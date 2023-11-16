@@ -344,6 +344,7 @@ uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
 {
   uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
   uint8_t syncword[] = {0x2D, 0xD4};
+  char buf[7];
 
   memcpy(msg, preamble, 4);
   memcpy(&msg[4], syncword, 2);
@@ -351,10 +352,69 @@ uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
   uint8_t payload[] = {0x2A, 0xAF, 0x21, 0x10, 0x34, 0x27, 0x18, 0xFF, 0xAA, 0xFF, 0x29, 0x28, 0xFF,
                        0xBB, 0x89, 0xFF, 0x01, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
-  memcpy(&msg[6], payload, 26);
+  ws.genMessage(0 /* slot */, 0xFFFFFFFF /* id */, SENSOR_TYPE_WEATHER1 /* s_type */, 7 /* channel */);
+
+  payload[2] = ws.sensor[0].sensor_id >> 24;
+  payload[3] = (ws.sensor[0].sensor_id >> 16) & 0xFF;
+  payload[4] = (ws.sensor[0].sensor_id >> 8) & 0xFF;
+  payload[5] = (ws.sensor[0].sensor_id) & 0xFF;
+  payload[6] = ws.sensor[0].s_type << 4;
+  payload[6] |= (ws.sensor[0].startup ? 0 : 8) | ws.sensor[0].chan;
+
+
+  snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_gust_meter_sec);
+  log_i("Wind gust: %04.1f", ws.sensor[0].w.wind_gust_meter_sec);
+  payload[7] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+  payload[8] = (buf[3] - '0') << 4;
+
+  snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_avg_meter_sec);
+  log_i("Wind avg: %04.1f", ws.sensor[0].w.wind_avg_meter_sec);
+  payload[9] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+  payload[8] |= buf[3] - '0';
+
+  // Invert bytes
+  payload[7] ^= 0xFF;
+  payload[8] ^= 0xFF;
+  payload[9] ^= 0xFF;
+
+  snprintf(buf, 7, "%03d", (int)ws.sensor[0].w.wind_direction_deg);
+  log_i("Wind dir: %03d", (int)ws.sensor[0].w.wind_direction_deg);
+  payload[10] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+  payload[11] = (buf[2] - '0') << 4;
+
+  float temp_c = ws.sensor[0].w.temp_c;
+  log_i("Temp: %04.1f", temp_c);
+  if (temp_c < 0) {
+    temp_c += 100;
+    payload[13] = 8;
+  } else {
+    payload[13] = 0;
+  }
+  snprintf(buf, 7, "%04.1f", temp_c);
+  payload[12] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+  payload[13] |= ((buf[3] - '0') << 4) | (ws.sensor[0].battery_ok ? 2 : 0);
+  snprintf(buf, 7, "%02d", ws.sensor[0].w.humidity);
+  payload[14] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+  payload[16] = 0; // Flags: temp_ok
+ 
+  int sum = add_bytes(&payload[2], 15);
+  int chk = 0xFF - (sum & 0xFF);
+  log_d("Checksum: 0x%02X vs 0x%02X", chk, payload[17]);
+  payload[17] = chk;
+
+  //int crc = crc16(&payload[2], 16, 0x1021 /* polynomial */, 0 /* init */);
+  //int digest = crc ^ 0xE359;
+  // log_d("CRC: 0x%04X", crc ^ 0xE359);
+  int digest = lfsr_digest16(&payload[2], 15, 0x8810, 0x5412);
+  payload[0] = digest >> 8;
+  payload[1] = digest & 0xFF;
+
+
+
+  memcpy(&msg[6], payload, 18);
 
   // Return message size
-  return 4 + 2 + 26;
+  return 4 + 2 + 18;
 }
 
 //
@@ -531,17 +591,17 @@ uint8_t encodeBresserLightningPayload(String msg_str, uint8_t *msg)
  * Decoder for Bresser Water Leakage outdoor sensor
  *
  * https://github.com/matthias-bs/BresserWeatherSensorReceiver/issues/77
- * 
+ *
  * Preamble: aa aa 2d d4
- * 
+ *
  * hhhh ID:hhhhhhhh TYPE:4d NSTARTUP:b CH:3d ALARM:b NALARM:b BATT:bb FLAGS:bbbb hhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhhh
- * 
+ *
  * Examples:
  * ---------
  * [Bresser Water Leakage Sensor, PN 7009975]
- * 
+ *
  *[00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25]
- * 
+ *
  * C7 70 35 97 04 08 57 70 00 00 00 00 00 00 00 00 03 FF FF FF FF FF FF FF FF FF [CH7]
  * DF 7D 36 49 27 09 56 70 00 00 00 00 00 00 00 00 03 FF FF FF FF FF FF FF FF FF [CH6]
  * 9E 30 79 84 33 06 55 70 00 00 00 00 00 00 00 00 03 FF FD DF FF BF FF DF FF FF [CH5]
@@ -563,7 +623,7 @@ uint8_t encodeBresserLightningPayload(String msg_str, uint8_t *msg)
  * 71 9C 54 81 72 09 51 80 00 00 00 00 00 00 00 00 1F FF FF F7 FF FF FF FF FF FF [CH1+BATT_LO+ALARM]
  * F0 94 54 81 72 09 59 40 00 00 00 00 00 00 00 00 0F FF DF FF FF FF FF BF FD F7 [CH1+BATT_LO+NSTARTUP]
  * F0 94 54 81 72 09 59 80 00 00 00 00 00 00 00 00 03 FF B7 FF ED FF FF FF DF FF [CH1+BATT_LO+NSTARTUP+ALARM]
- * 
+ *
  * - The actual message length is not known (probably 16 or 17 bytes)
  * - The first two bytes are presumably a checksum/crc/digest; algorithm still to be found
  * - The ID changes on power-up/reset
@@ -577,7 +637,7 @@ uint8_t encodeBresserLeakagePayload(String msg_str, uint8_t *msg)
   memcpy(msg, preamble, 4);
   memcpy(&msg[4], syncword, 2);
 
-  uint8_t payload[] = {0xB3, 0xDA, 0x55, 0x57, 0x17, 0x40, 0x53, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00, 
+  uint8_t payload[] = {0xB3, 0xDA, 0x55, 0x57, 0x17, 0x40, 0x53, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00,
                        0x00, 0x00, 0x00, 0x03, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFB};
 
   memcpy(&msg[6], payload, 26);
@@ -586,12 +646,11 @@ uint8_t encodeBresserLeakagePayload(String msg_str, uint8_t *msg)
   return 4 + 2 + 26;
 }
 
-
 void loop()
 {
   String input_str;
   static String json_str;
-  static Encoders encoder = ENC_BRESSER_5IN1;
+  static Encoders encoder = ENC_BRESSER_6IN1;
   static unsigned tx_interval = TX_INTERVAL;
 
   if (Serial.available())
@@ -681,7 +740,7 @@ void loop()
   case ENC_BRESSER_LIGHTNING:
     msg_size = encodeBresserLightningPayload(json_str, msg_buf);
     break;
-  
+
   case ENC_BRESSER_LEAKAGE:
     msg_size = encodeBresserLeakagePayload(json_str, msg_buf);
     break;
@@ -722,6 +781,46 @@ void loop()
 
   // wait for TX_INTERVAL seconds before transmitting again
   delay(tx_interval * 1000);
+}
+
+//
+// From from rtl_433 project - https://github.com/merbanan/rtl_433/blob/master/src/util.c
+//
+int add_bytes(uint8_t const message[], unsigned num_bytes)
+{
+  int result = 0;
+  for (unsigned i = 0; i < num_bytes; ++i)
+  {
+    result += message[i];
+  }
+  return result;
+}
+
+//
+// From from rtl_433 project - https://github.com/merbanan/rtl_433/blob/master/src/util.c
+//
+uint16_t lfsr_digest16(uint8_t const message[], unsigned bytes, uint16_t gen, uint16_t key)
+{
+  uint16_t sum = 0;
+  for (unsigned k = 0; k < bytes; ++k)
+  {
+    uint8_t data = message[k];
+    for (int i = 7; i >= 0; --i)
+    {
+      // fprintf(stderr, "key at bit %d : %04x\n", i, key);
+      // if data bit is set then xor with key
+      if ((data >> i) & 1)
+        sum ^= key;
+
+      // roll the key right (actually the lsb is dropped here)
+      // and apply the gen (needs to include the dropped lsb as msb)
+      if (key & 1)
+        key = (key >> 1) ^ gen;
+      else
+        key = (key >> 1);
+    }
+  }
+  return sum;
 }
 
 //
