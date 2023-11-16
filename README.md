@@ -12,7 +12,8 @@ This project is closely related to [BresserWeatherSensorReceiver](https://github
 
 * Emulation of sensors for testing purposes
 * Emulation of sensors while replacing the data with entirely different sensor values,
-  e.g. using the manufacturer's temperature sensor protocol to display snow depth instead. 
+  e.g. using the manufacturer's temperature sensor protocol to display snow depth instead.
+* Repeater (combined with receiver)
 
 ## Supported Protocols
 
