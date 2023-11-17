@@ -18,7 +18,7 @@ This project is closely related to [BresserWeatherSensorReceiver](https://github
 ## Supported Protocols
 
 - [x] Bresser 5-in-1
-- [ ] Bresser 6-in-1
+- [x] Bresser 6-in-1
 - [ ] Bresser 7-in-1
 - [x] Bresser Lightning
 - [ ] Bresser Leakage

@@ -47,6 +47,7 @@
 // 20231114 Added setting of encoder and tx_interval
 // 20231115 Added support of CC1101 transceiver
 //          Added encodeBresser<6In1|7In1|Leakage>Payload() - only raw data input!
+// 20231117 Implemented encodeBresser6In1Payload() (basic functionality)
 //
 // ToDo:
 // -
@@ -344,16 +345,67 @@ uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
 {
   uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
   uint8_t syncword[] = {0x2D, 0xD4};
-  char buf[7];
+  static int msg_type;
+  char buf[8];
 
   memcpy(msg, preamble, 4);
   memcpy(&msg[4], syncword, 2);
 
+#if defined(DATA_RAW)
   uint8_t payload[] = {0x2A, 0xAF, 0x21, 0x10, 0x34, 0x27, 0x18, 0xFF, 0xAA, 0xFF, 0x29, 0x28, 0xFF,
                        0xBB, 0x89, 0xFF, 0x01, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 
+#elif defined(DATA_GEN)
+  uint8_t payload[18];
   ws.genMessage(0 /* slot */, 0xFFFFFFFF /* id */, SENSOR_TYPE_WEATHER1 /* s_type */, 7 /* channel */);
 
+#elif defined(DATA_JSON_CONST)
+  uint8_t payload[18];
+  StaticJsonDocument<512> doc;
+  const char json[] =
+      "{\"sensor_id\":4294967295,\"s_type\":1,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"temp_c\":12.3,\
+        \"humidity\":44,\"wind_gust_meter_sec\":3.3,\"wind_avg_meter_sec\":2.2,\"wind_direction_deg\":111.1,\
+        \"rain_mm\":12345.6}";
+
+  // Deserialize the JSON document
+  DeserializationError error = deserializeJson(doc, json);
+
+#elif defined(DATA_JSON_INPUT)
+  if (!msg_str.length())
+  {
+    return 0;
+  }
+
+  uint8_t payload[18];
+  StaticJsonDocument<512> doc;
+
+  // Deserialize the JSON document
+  DeserializationError error = deserializeJson(doc, msg_str.c_str());
+
+#endif
+
+#if defined(DATA_JSON_INPUT) || defined(DATA_JSON_CONST)
+  // Test if parsing succeeded
+  if (error)
+  {
+    log_e("DeserializeJson() failed: %s", error.f_str());
+    return 0;
+  }
+
+  ws.sensor[0].sensor_id = doc["sensor_id"];
+  ws.sensor[0].s_type = doc["s_type"];
+  ws.sensor[0].chan = doc["chan"];
+  ws.sensor[0].startup = doc["startup"];
+  ws.sensor[0].battery_ok = doc["battery_ok"];
+  ws.sensor[0].w.temp_c = doc["temp_c"];
+  ws.sensor[0].w.humidity = doc["humidity"];
+  ws.sensor[0].w.wind_gust_meter_sec = doc["wind_gust_meter_sec"];
+  ws.sensor[0].w.wind_avg_meter_sec = doc["wind_avg_meter_sec"];
+  ws.sensor[0].w.wind_direction_deg = doc["wind_direction_deg"];
+  ws.sensor[0].w.rain_mm = doc["rain_mm"];
+#endif
+
+#if !defined(DATA_RAW)
   payload[2] = ws.sensor[0].sensor_id >> 24;
   payload[3] = (ws.sensor[0].sensor_id >> 16) & 0xFF;
   payload[4] = (ws.sensor[0].sensor_id >> 8) & 0xFF;
@@ -361,14 +413,13 @@ uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
   payload[6] = ws.sensor[0].s_type << 4;
   payload[6] |= (ws.sensor[0].startup ? 0 : 8) | ws.sensor[0].chan;
 
-
   snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_gust_meter_sec);
-  log_i("Wind gust: %04.1f", ws.sensor[0].w.wind_gust_meter_sec);
+  log_d("Wind gust: %04.1f", ws.sensor[0].w.wind_gust_meter_sec);
   payload[7] = ((buf[0] - '0') << 4) | (buf[1] - '0');
   payload[8] = (buf[3] - '0') << 4;
 
   snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_avg_meter_sec);
-  log_i("Wind avg: %04.1f", ws.sensor[0].w.wind_avg_meter_sec);
+  log_d("Wind avg: %04.1f", ws.sensor[0].w.wind_avg_meter_sec);
   payload[9] = ((buf[0] - '0') << 4) | (buf[1] - '0');
   payload[8] |= buf[3] - '0';
 
@@ -378,38 +429,61 @@ uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
   payload[9] ^= 0xFF;
 
   snprintf(buf, 7, "%03d", (int)ws.sensor[0].w.wind_direction_deg);
-  log_i("Wind dir: %03d", (int)ws.sensor[0].w.wind_direction_deg);
+  log_d("Wind dir: %03d", (int)ws.sensor[0].w.wind_direction_deg);
   payload[10] = ((buf[0] - '0') << 4) | (buf[1] - '0');
   payload[11] = (buf[2] - '0') << 4;
 
-  float temp_c = ws.sensor[0].w.temp_c;
-  log_i("Temp: %04.1f", temp_c);
-  if (temp_c < 0) {
-    temp_c += 100;
-    payload[13] = 8;
-  } else {
-    payload[13] = 0;
+  if (ws.sensor[0].s_type == SENSOR_TYPE_WEATHER1)
+  {
+    if (msg_type == 0)
+    {
+      float temp_c = ws.sensor[0].w.temp_c;
+      log_d("Temp: %04.1f", temp_c);
+      if (temp_c < 0)
+      {
+        temp_c += 100;
+        payload[13] = 8;
+      }
+      else
+      {
+        payload[13] = 0;
+      }
+
+      snprintf(buf, 7, "%04.1f", temp_c);
+      payload[12] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+      payload[13] |= ((buf[3] - '0') << 4) | (ws.sensor[0].battery_ok ? 2 : 0);
+      snprintf(buf, 7, "%02d", ws.sensor[0].w.humidity);
+      payload[14] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+      payload[16] = 0; // Flags: temp_ok
+      msg_type = 1;
+    }
+    else
+    {
+      snprintf(buf, 8, "%07.1f", ws.sensor[0].w.rain_mm);
+      log_d("Rain: %07.1f", ws.sensor[0].w.rain_mm);
+      payload[12] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+      payload[13] = ((buf[2] - '0') << 4) | (buf[3] - '0');
+      payload[14] = ((buf[4] - '0') << 4) | (buf[6] - '0');
+      payload[12] ^= 0xFF;
+      payload[13] ^= 0xFF;
+      payload[14] ^= 0xFF;
+      payload[16] = 1; // Flags: !temp_ok
+      msg_type = 0;
+    }
   }
-  snprintf(buf, 7, "%04.1f", temp_c);
-  payload[12] = ((buf[0] - '0') << 4) | (buf[1] - '0');
-  payload[13] |= ((buf[3] - '0') << 4) | (ws.sensor[0].battery_ok ? 2 : 0);
-  snprintf(buf, 7, "%02d", ws.sensor[0].w.humidity);
-  payload[14] = ((buf[0] - '0') << 4) | (buf[1] - '0');
-  payload[16] = 0; // Flags: temp_ok
- 
+
   int sum = add_bytes(&payload[2], 15);
   int chk = 0xFF - (sum & 0xFF);
   log_d("Checksum: 0x%02X vs 0x%02X", chk, payload[17]);
   payload[17] = chk;
 
-  //int crc = crc16(&payload[2], 16, 0x1021 /* polynomial */, 0 /* init */);
-  //int digest = crc ^ 0xE359;
-  // log_d("CRC: 0x%04X", crc ^ 0xE359);
+  // int crc = crc16(&payload[2], 16, 0x1021 /* polynomial */, 0 /* init */);
+  // int digest = crc ^ 0xE359;
+  //  log_d("CRC: 0x%04X", crc ^ 0xE359);
   int digest = lfsr_digest16(&payload[2], 15, 0x8810, 0x5412);
   payload[0] = digest >> 8;
   payload[1] = digest & 0xFF;
-
-
+#endif
 
   memcpy(&msg[6], payload, 18);
 
@@ -677,7 +751,6 @@ void loop()
       {
         encoder = ENC_BRESSER_6IN1;
         log_i("Encoder: Bresser 6-in-1");
-        log_w("This encoder can currently only send raw data!");
       }
       else if (input_str.substring(pos + 1).startsWith("bresser-7in1"))
       {
