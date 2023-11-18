@@ -56,7 +56,14 @@ Select option in [SensorTransmitter.h](SensorTransmitter.h).
    {"sensor_id": 4294967295, "s_type": 4, "chan": 0, "startup": 0, "battery_ok": 1, "temp_c": 12.3, "moisture": 44}
    ```
 
-   Example 3: Bresser Lightning
+   Example 3: Bresser 6-in-1
+
+   ```
+   {"sensor_id": 4294967295, "s_type": 1, "chan": 0, "startup": 0, "battery_ok": 1, "temp_c": 12.3, "humidity": 44, "wind_gust_meter_sec": 3.3, "wind_avg_meter_sec": 2.2, "wind_direction_deg": 111.1, "rain_mm": 123.4, "uv": 7.8}
+   ```
+
+
+   Example 4: Bresser Lightning
 
    ```
    {"sensor_id": 65535, "s_type": 9, "chan": 0, "startup": 0, "battery_ok": 1, "strike_count": 11, "distance_km": 7}
