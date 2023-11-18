@@ -48,6 +48,7 @@
 // 20231115 Added support of CC1101 transceiver
 //          Added encodeBresser<6In1|7In1|Leakage>Payload() - only raw data input!
 // 20231117 Implemented encodeBresser6In1Payload() (basic functionality)
+// 20231118 encodeBresser6In1Payload(): Added UV index and remaining (known) sensors
 //
 // ToDo:
 // -
@@ -397,12 +398,21 @@ uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
   ws.sensor[0].chan = doc["chan"];
   ws.sensor[0].startup = doc["startup"];
   ws.sensor[0].battery_ok = doc["battery_ok"];
-  ws.sensor[0].w.temp_c = doc["temp_c"];
-  ws.sensor[0].w.humidity = doc["humidity"];
-  ws.sensor[0].w.wind_gust_meter_sec = doc["wind_gust_meter_sec"];
-  ws.sensor[0].w.wind_avg_meter_sec = doc["wind_avg_meter_sec"];
-  ws.sensor[0].w.wind_direction_deg = doc["wind_direction_deg"];
-  ws.sensor[0].w.rain_mm = doc["rain_mm"];
+  if (ws.sensor[0].s_type == SENSOR_TYPE_SOIL)
+  {
+    ws.sensor[0].soil.temp_c = doc["temp_c"];
+    ws.sensor[0].soil.moisture = doc["moisture"];
+  }
+  else
+  {
+    ws.sensor[0].w.temp_c = doc["temp_c"];
+    ws.sensor[0].w.humidity = doc["humidity"];
+    ws.sensor[0].w.wind_gust_meter_sec = doc["wind_gust_meter_sec"];
+    ws.sensor[0].w.wind_avg_meter_sec = doc["wind_avg_meter_sec"];
+    ws.sensor[0].w.wind_direction_deg = doc["wind_direction_deg"];
+    ws.sensor[0].w.rain_mm = doc["rain_mm"];
+    ws.sensor[0].w.uv = doc["uv"];
+  }
 #endif
 
 #if !defined(DATA_RAW)
@@ -433,11 +443,22 @@ uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
   payload[10] = ((buf[0] - '0') << 4) | (buf[1] - '0');
   payload[11] = (buf[2] - '0') << 4;
 
-  if (ws.sensor[0].s_type == SENSOR_TYPE_WEATHER1)
+  if ((ws.sensor[0].s_type == SENSOR_TYPE_WEATHER1) ||
+      (ws.sensor[0].s_type == SENSOR_TYPE_POOL_THERMO) ||
+      (ws.sensor[0].s_type == SENSOR_TYPE_THERMO_HYGRO) ||
+      (ws.sensor[0].s_type == SENSOR_TYPE_SOIL))
   {
     if (msg_type == 0)
     {
-      float temp_c = ws.sensor[0].w.temp_c;
+      float temp_c;
+      if (ws.sensor[0].s_type == SENSOR_TYPE_SOIL)
+      {
+        temp_c = ws.sensor[0].soil.temp_c;
+      }
+      else
+      {
+        temp_c = ws.sensor[0].w.temp_c;
+      }
       log_d("Temp: %04.1f", temp_c);
       if (temp_c < 0)
       {
@@ -452,10 +473,32 @@ uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
       snprintf(buf, 7, "%04.1f", temp_c);
       payload[12] = ((buf[0] - '0') << 4) | (buf[1] - '0');
       payload[13] |= ((buf[3] - '0') << 4) | (ws.sensor[0].battery_ok ? 2 : 0);
-      snprintf(buf, 7, "%02d", ws.sensor[0].w.humidity);
-      payload[14] = ((buf[0] - '0') << 4) | (buf[1] - '0');
       payload[16] = 0; // Flags: temp_ok
-      msg_type = 1;
+
+      if ((ws.sensor[0].s_type == SENSOR_TYPE_WEATHER1) ||
+          (ws.sensor[0].s_type == SENSOR_TYPE_THERMO_HYGRO))
+      {
+        snprintf(buf, 7, "%02d", ws.sensor[0].w.humidity);
+        payload[14] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+      }
+
+      if (ws.sensor[0].s_type == SENSOR_TYPE_SOIL)
+      {
+        int const moisture_map[] = {0, 7, 13, 20, 27, 33, 40, 47, 53, 60, 67, 73, 80, 87, 93, 99}; // scale is 20/3
+        for (int i=0; i<16; i++) {
+          if (moisture_map[i] > ws.sensor[0].soil.moisture) {
+            log_d("Moisture: %d Index: %d", ws.sensor[0].soil.moisture, i);
+            payload[14] = i;
+            break;
+          }
+        }
+        //payload[14] = (int)(ws.sensor[0].soil.moisture / 20.0f * 3.0f);
+      }
+
+      if (ws.sensor[0].s_type == SENSOR_TYPE_WEATHER1)
+      {
+        msg_type = 1;
+      }
     }
     else
     {
@@ -471,6 +514,13 @@ uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
       msg_type = 0;
     }
   }
+
+  snprintf(buf, 8, "%04.1f", ws.sensor[0].w.uv);
+  log_d("UV: %04.1f", ws.sensor[0].w.uv);
+  payload[15] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+  payload[16] = ((buf[3] - '0') << 4);
+  payload[15] ^= 0xFF;
+  payload[16] ^= 0xF0;
 
   int sum = add_bytes(&payload[2], 15);
   int chk = 0xFF - (sum & 0xFF);
