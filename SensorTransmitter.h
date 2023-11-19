@@ -53,7 +53,7 @@
 #define NUM_SENSORS 1               //!< WeatherSensor - no. of sensors
 #define WIND_DATA_FLOATINGPOINT     //!< WeatherSensor - wind data type
 
-//!< Select one of the followind data sources
+//!< Select one of the following data sources
 //#define DATA_RAW                  //!< payload from raw data
 //#define DATA_GEN                  //!< payload from WeatherSensor::genMessage()
 //#define DATA_JSON_CONST             //!< payload from JSON constant string
