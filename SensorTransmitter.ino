@@ -119,6 +119,222 @@ int count = 0;
 
 WeatherSensor ws;
 
+int msgBegin(uint8_t *msg)
+{
+  uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
+  uint8_t syncword[] = {0x2D, 0xD4};
+
+  memcpy(msg, preamble, sizeof(preamble));
+  memcpy(&msg[sizeof(preamble)], syncword, sizeof(syncword));
+
+  return sizeof(preamble) + sizeof(syncword);
+}
+
+#if defined(DATA_RAW)
+uint8_t rawPayload(Encoders encoder, uint8_t *msg)
+{
+  uint8_t payload_5in1[] = {0xEA, 0xEC, 0x7F, 0xEB, 0x5F, 0xEE, 0xEF, 0xFA, 0xFE, 0x76, 0xBB, 0xFA, 0xFF,
+                            0x15, 0x13, 0x80, 0x14, 0xA0, 0x11, 0x10, 0x05, 0x01, 0x89, 0x44, 0x05, 0x00};
+  uint8_t payload_6in1[] = {0x2A, 0xAF, 0x21, 0x10, 0x34, 0x27, 0x18, 0xFF, 0xAA, 0xFF, 0x29, 0x28, 0xFF,
+                            0xBB, 0x89, 0xFF, 0x01, 0x1F};
+  uint8_t payload_7in1[] = {0xC4, 0xD6, 0x3A, 0xC5, 0xBD, 0xFA, 0x18, 0xAA, 0xAA, 0xAA, 0xAA, 0xAB, 0xFC,
+                            0xAA, 0x98, 0xDA, 0x89, 0xA3, 0x2F, 0xEC, 0xAF, 0x9A, 0xAA, 0xAA, 0xAA, 0x00};
+  uint8_t payload_lightning[] = {0x73, 0x69, 0xB5, 0x08, 0xAA, 0xA2, 0x90, 0xAA, 0xAA, 0xAA, 0x00, 0x00, 0x00,
+                                 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+  uint8_t payload_leakage[] = {0xB3, 0xDA, 0x55, 0x57, 0x17, 0x40, 0x53, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00,
+                               0x00, 0x00, 0x00, 0x03, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFB};
+  if (encoder == ENC_BRESSER_5IN1)
+  {
+    memcpy(msg, payload_5in1, 26);
+    return 26;
+  }
+  else if (encoder == ENC_BRESSER_6IN1)
+  {
+    memcpy(msg, payload_6in1, 18);
+    return 18;
+  }
+  else if (encoder == ENC_BRESSER_7IN1)
+  {
+    memcpy(msg, payload_7in1, 26);
+    return 26;
+  }
+  else if (encoder == ENC_BRESSER_LIGHTNING)
+  {
+    memcpy(msg, payload_lightning, 26);
+    return 26;
+  }
+  else if (encoder == ENC_BRESSER_LEAKAGE)
+  {
+    memcpy(msg, payload_leakage, 26);
+    return 26;
+  }
+  else
+  {
+    log_e("Encoder not supported!");
+  }
+}
+#endif
+
+#if defined(GEN_DATA)
+void genData(Encoders encoder)
+{
+  if (encoder == ENC_BRESSER_5IN1)
+  {
+    ws.genMessage(0 /* slot */, 0xff /* id */, SENSOR_TYPE_WEATHER0 /* s_type */);
+  }
+  else if (encoder == ENC_BRESSER_6IN1)
+  {
+    ws.genMessage(0 /* slot */, 0xFFFFFFFF /* id */, SENSOR_TYPE_WEATHER1 /* s_type */);
+  }
+  else if (encoder == ENC_BRESSER_7IN1)
+  {
+    ws.genMessage(0 /* slot */, 0xFFFF /* id */, SENSOR_TYPE_WEATHER1 /* s_type */);
+  }
+  else if (encoder == ENC_BRESSER_LIGHTNING)
+  {
+    ws.genMessage(0 /* slot */, 0xFFFF /* id */, SENSOR_TYPE_LIGHTNING /* s_type */);
+  }
+  else if (encoder == ENC_BRESSER_LEAKAGE)
+  {
+    ws.genMessage(0 /* slot */, 0xFFFFFFFF /* id */, SENSOR_TYPE_LEAKAGE /* s_type */);
+  }
+  else
+  {
+    log_e("Encoder not supported!");
+  }
+}
+#endif
+
+#if defined(DATA_JSON_CONST)
+void genJson(Encoders encoder, String &json_str)
+{
+  const String json_5in1 =
+      "{\"sensor_id\":255,\"s_type\":1,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"temp_c\":12.3,\
+      \"humidity\":44,\"wind_gust_meter_sec\":3.3,\"wind_avg_meter_sec\":2.2,\"wind_direction_deg\":111.1,\
+      \"rain_mm\":123.4}";
+
+  const String json_6in1 = 
+      "{\"sensor_id\":4294967295,\"s_type\":1,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"temp_c\":12.3,\
+      \"humidity\":44,\"wind_gust_meter_sec\":3.3,\"wind_avg_meter_sec\":2.2,\"wind_direction_deg\":111.1,\
+      \"rain_mm\":12345.6,\"uv\":7.8}";
+
+  const String json_7in1 = 
+      "{\"sensor_id\":65535,\"s_type\":1,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"temp_c\":12.3,\
+      \"humidity\":44,\"wind_gust_meter_sec\":3.3,\"wind_avg_meter_sec\":2.2,\"wind_direction_deg\":111.1,\
+      \"rain_mm\":12345.6}";
+
+  const String json_lightning = 
+      "{\"sensor_id\":65535,\"s_type\":9,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"strike_count\":22,\
+      \"distance_km\":44}";
+
+  // TBD
+  const String json_leakage = "{}";
+
+  if (encoder == ENC_BRESSER_5IN1)
+  {
+    json_str = json_5in1;
+  }
+  else if (encoder == ENC_BRESSER_6IN1)
+  {
+    json_str = json_6in1;
+  }
+  else if (encoder == ENC_BRESSER_7IN1)
+  {
+    json_str = json_7in1;
+  }
+  else if (encoder == ENC_BRESSER_LIGHTNING)
+  {
+    json_str = json_lightning;
+  }
+  // else if (encoder == ENC_BRESSER_LEAKAGE)
+  // {
+
+  // }
+  else
+  {
+    log_e("Encoder not supported!");
+  }
+}
+#endif
+
+#if defined(DATA_JSON_INPUT) || defined(DATA_JSON_CONST)
+bool deSerialize(Encoders encoder, String json_str)
+{
+
+  uint8_t payload[26];
+  StaticJsonDocument<512> doc;
+
+  // Deserialize the JSON document
+  DeserializationError error = deserializeJson(doc, json_str.c_str());
+
+  // Test if parsing succeeded
+  if (error)
+  {
+    log_e("DeserializeJson() failed: %s", error.f_str());
+    return false;
+  }
+
+  ws.sensor[0].sensor_id = doc["sensor_id"];
+  ws.sensor[0].s_type = doc["s_type"];
+  ws.sensor[0].chan = doc["chan"];
+  ws.sensor[0].startup = doc["startup"];
+  ws.sensor[0].battery_ok = doc["battery_ok"];
+
+  if (encoder == ENC_BRESSER_5IN1)
+  {
+    ws.sensor[0].w.temp_c = doc["temp_c"];
+    ws.sensor[0].w.humidity = doc["humidity"];
+    ws.sensor[0].w.wind_gust_meter_sec = doc["wind_gust_meter_sec"];
+    ws.sensor[0].w.wind_avg_meter_sec = doc["wind_avg_meter_sec"];
+    ws.sensor[0].w.wind_direction_deg = doc["wind_direction_deg"];
+    ws.sensor[0].w.rain_mm = doc["rain_mm"];
+  }
+  else if (encoder == ENC_BRESSER_6IN1)
+  {
+    if (ws.sensor[0].s_type == SENSOR_TYPE_SOIL)
+    {
+      ws.sensor[0].soil.temp_c = doc["temp_c"];
+      ws.sensor[0].soil.moisture = doc["moisture"];
+    }
+    else
+    {
+      ws.sensor[0].w.temp_c = doc["temp_c"];
+      ws.sensor[0].w.humidity = doc["humidity"];
+      ws.sensor[0].w.wind_gust_meter_sec = doc["wind_gust_meter_sec"];
+      ws.sensor[0].w.wind_avg_meter_sec = doc["wind_avg_meter_sec"];
+      ws.sensor[0].w.wind_direction_deg = doc["wind_direction_deg"];
+      ws.sensor[0].w.rain_mm = doc["rain_mm"];
+      ws.sensor[0].w.uv = doc["uv"];
+    }
+  }
+  else if (encoder == ENC_BRESSER_7IN1)
+  {
+    ws.sensor[0].w.temp_c = doc["temp_c"];
+    ws.sensor[0].w.humidity = doc["humidity"];
+    ws.sensor[0].w.wind_gust_meter_sec = doc["wind_gust_meter_sec"];
+    ws.sensor[0].w.wind_avg_meter_sec = doc["wind_avg_meter_sec"];
+    ws.sensor[0].w.wind_direction_deg = doc["wind_direction_deg"];
+    ws.sensor[0].w.rain_mm = doc["rain_mm"];
+    ws.sensor[0].w.uv = doc["uv"];
+    ws.sensor[0].w.light_klx = doc["light_klx"];
+  }
+  else if (ENC_BRESSER_LIGHTNING)
+  {
+    ws.sensor[0].lgt.strike_count = doc["strike_count"];
+    ws.sensor[0].lgt.distance_km = doc["distance_km"];
+  }
+  // else if (ENC_BRESSER_LEAKAGE)
+  // {
+  //}
+  else
+  {
+    log_e("Encoder not supported!");
+    return false;
+  }
+  return true;
+}
+#endif
+
 //
 // From from rtl_433 project - https://github.com/merbanan/rtl_433/blob/master/src/devices/bresser_5in1.c (20220212)
 //
@@ -139,70 +355,11 @@ WeatherSensor ws;
 // - B = Battery. 0=Ok, 8=Low.
 // - s = startup, 0 after power-on/reset / 8 after 1 hour
 // - S = sensor type, only low nibble used, 0x9 for Bresser Professional Rain Gauge
-uint8_t encodeBresser5In1Payload(String msg_str, uint8_t *msg)
+uint8_t encodeBresser5In1Payload(uint8_t *msg)
 {
-  uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
-  uint8_t syncword[] = {0x2D, 0xD4};
-
+  uint8_t payload[26] = {0};
   char buf[7];
-  memcpy(msg, preamble, 4);
-  memcpy(&msg[4], syncword, 2);
 
-#if defined(DATA_RAW)
-  uint8_t payload[] = {0xEA, 0xEC, 0x7F, 0xEB, 0x5F, 0xEE, 0xEF, 0xFA, 0xFE, 0x76, 0xBB, 0xFA, 0xFF,
-                       0x15, 0x13, 0x80, 0x14, 0xA0, 0x11, 0x10, 0x05, 0x01, 0x89, 0x44, 0x05, 0x00};
-
-#elif defined(DATA_GEN)
-  uint8_t payload[26];
-  ws.genMessage(0 /* slot */, 0xff /* id */, SENSOR_TYPE_WEATHER0 /* s_type */);
-
-#elif defined(DATA_JSON_CONST)
-  uint8_t payload[26];
-  StaticJsonDocument<512> doc;
-  const char json[] =
-      "{\"sensor_id\":255,\"s_type\":1,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"temp_c\":12.3,\
-        \"humidity\":44,\"wind_gust_meter_sec\":3.3,\"wind_avg_meter_sec\":2.2,\"wind_direction_deg\":111.1,\
-        \"rain_mm\":123.4}";
-
-  // Deserialize the JSON document
-  DeserializationError error = deserializeJson(doc, json);
-
-#elif defined(DATA_JSON_INPUT)
-  if (!msg_str.length())
-  {
-    return 0;
-  }
-
-  uint8_t payload[26];
-  StaticJsonDocument<512> doc;
-
-  // Deserialize the JSON document
-  DeserializationError error = deserializeJson(doc, msg_str.c_str());
-
-#endif
-
-#if defined(DATA_JSON_INPUT) || defined(DATA_JSON_CONST)
-  // Test if parsing succeeded
-  if (error)
-  {
-    log_e("DeserializeJson() failed: %s", error.f_str());
-    return 0;
-  }
-
-  ws.sensor[0].sensor_id = doc["sensor_id"];
-  ws.sensor[0].s_type = doc["s_type"];
-  ws.sensor[0].chan = doc["chan"];
-  ws.sensor[0].startup = doc["startup"];
-  ws.sensor[0].battery_ok = doc["battery_ok"];
-  ws.sensor[0].w.temp_c = doc["temp_c"];
-  ws.sensor[0].w.humidity = doc["humidity"];
-  ws.sensor[0].w.wind_gust_meter_sec = doc["wind_gust_meter_sec"];
-  ws.sensor[0].w.wind_avg_meter_sec = doc["wind_avg_meter_sec"];
-  ws.sensor[0].w.wind_direction_deg = doc["wind_direction_deg"];
-  ws.sensor[0].w.rain_mm = doc["rain_mm"];
-#endif
-
-#if !defined(DATA_RAW)
   payload[14] = (uint8_t)(ws.sensor[0].sensor_id & 0xFF);
   payload[15] = ((ws.sensor[0].startup ? 0 : 8) << 4) | ws.sensor[0].s_type;
 
@@ -261,12 +418,11 @@ uint8_t encodeBresser5In1Payload(String msg_str, uint8_t *msg)
   {
     payload[col] = ~payload[col + 13];
   }
-#endif
 
-  memcpy(&msg[6], payload, 26);
+  memcpy(msg, payload, 26);
 
   // Return message size
-  return 4 + 2 + 26;
+  return 26;
 }
 
 //
@@ -342,80 +498,12 @@ uint8_t encodeBresser5In1Payload(String msg_str, uint8_t *msg)
 // - 18c0 0f10 18 : rege245 BRESSER-PC-Weather-station-with-6-in-1-outdoor-sensor
 // - 1880 02c3 18 : f4gqk 6-in-1
 // - 18b0 0887 18 : npkap
-uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
+uint8_t encodeBresser6In1Payload(uint8_t *msg)
 {
-  uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
-  uint8_t syncword[] = {0x2D, 0xD4};
   static int msg_type;
   char buf[8];
+  uint8_t payload[18] = {0};
 
-  memcpy(msg, preamble, 4);
-  memcpy(&msg[4], syncword, 2);
-
-#if defined(DATA_RAW)
-  uint8_t payload[] = {0x2A, 0xAF, 0x21, 0x10, 0x34, 0x27, 0x18, 0xFF, 0xAA, 0xFF, 0x29, 0x28, 0xFF,
-                       0xBB, 0x89, 0xFF, 0x01, 0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-
-#elif defined(DATA_GEN)
-  uint8_t payload[18];
-  ws.genMessage(0 /* slot */, 0xFFFFFFFF /* id */, SENSOR_TYPE_WEATHER1 /* s_type */, 7 /* channel */);
-
-#elif defined(DATA_JSON_CONST)
-  uint8_t payload[18];
-  StaticJsonDocument<512> doc;
-  const char json[] =
-      "{\"sensor_id\":4294967295,\"s_type\":1,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"temp_c\":12.3,\
-        \"humidity\":44,\"wind_gust_meter_sec\":3.3,\"wind_avg_meter_sec\":2.2,\"wind_direction_deg\":111.1,\
-        \"rain_mm\":12345.6}";
-
-  // Deserialize the JSON document
-  DeserializationError error = deserializeJson(doc, json);
-
-#elif defined(DATA_JSON_INPUT)
-  if (!msg_str.length())
-  {
-    return 0;
-  }
-
-  uint8_t payload[18];
-  StaticJsonDocument<512> doc;
-
-  // Deserialize the JSON document
-  DeserializationError error = deserializeJson(doc, msg_str.c_str());
-
-#endif
-
-#if defined(DATA_JSON_INPUT) || defined(DATA_JSON_CONST)
-  // Test if parsing succeeded
-  if (error)
-  {
-    log_e("DeserializeJson() failed: %s", error.f_str());
-    return 0;
-  }
-
-  ws.sensor[0].sensor_id = doc["sensor_id"];
-  ws.sensor[0].s_type = doc["s_type"];
-  ws.sensor[0].chan = doc["chan"];
-  ws.sensor[0].startup = doc["startup"];
-  ws.sensor[0].battery_ok = doc["battery_ok"];
-  if (ws.sensor[0].s_type == SENSOR_TYPE_SOIL)
-  {
-    ws.sensor[0].soil.temp_c = doc["temp_c"];
-    ws.sensor[0].soil.moisture = doc["moisture"];
-  }
-  else
-  {
-    ws.sensor[0].w.temp_c = doc["temp_c"];
-    ws.sensor[0].w.humidity = doc["humidity"];
-    ws.sensor[0].w.wind_gust_meter_sec = doc["wind_gust_meter_sec"];
-    ws.sensor[0].w.wind_avg_meter_sec = doc["wind_avg_meter_sec"];
-    ws.sensor[0].w.wind_direction_deg = doc["wind_direction_deg"];
-    ws.sensor[0].w.rain_mm = doc["rain_mm"];
-    ws.sensor[0].w.uv = doc["uv"];
-  }
-#endif
-
-#if !defined(DATA_RAW)
   payload[2] = ws.sensor[0].sensor_id >> 24;
   payload[3] = (ws.sensor[0].sensor_id >> 16) & 0xFF;
   payload[4] = (ws.sensor[0].sensor_id >> 8) & 0xFF;
@@ -485,14 +573,16 @@ uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
       if (ws.sensor[0].s_type == SENSOR_TYPE_SOIL)
       {
         int const moisture_map[] = {0, 7, 13, 20, 27, 33, 40, 47, 53, 60, 67, 73, 80, 87, 93, 99}; // scale is 20/3
-        for (int i=0; i<16; i++) {
-          if (moisture_map[i] > ws.sensor[0].soil.moisture) {
+        for (int i = 0; i < 16; i++)
+        {
+          if (moisture_map[i] > ws.sensor[0].soil.moisture)
+          {
             log_d("Moisture: %d Index: %d", ws.sensor[0].soil.moisture, i);
             payload[14] = i;
             break;
           }
         }
-        //payload[14] = (int)(ws.sensor[0].soil.moisture / 20.0f * 3.0f);
+        // payload[14] = (int)(ws.sensor[0].soil.moisture / 20.0f * 3.0f);
       }
 
       if (ws.sensor[0].s_type == SENSOR_TYPE_WEATHER1)
@@ -533,12 +623,11 @@ uint8_t encodeBresser6In1Payload(String msg_str, uint8_t *msg)
   int digest = lfsr_digest16(&payload[2], 15, 0x8810, 0x5412);
   payload[0] = digest >> 8;
   payload[1] = digest & 0xFF;
-#endif
 
-  memcpy(&msg[6], payload, 18);
+  memcpy(msg, payload, 18);
 
   // Return message size
-  return 4 + 2 + 18;
+  return 18;
 }
 
 //
@@ -571,33 +660,28 @@ DIGEST:8h8h ID?8h8h ?8h8h STYPE:4h STARTUP:1b CH:3b ?8h 4h ?4h8h4h PM_2_5:4h8h4h
 STYPE, STARTUP and CH are not covered by whitening. Probably also ID.
 First two bytes are an LFSR-16 digest, generator 0x8810 key 0xba95 with a final xor 0x6df1, which likely means we got that wrong.
 */
-uint8_t encodeBresser7In1Payload(String msg_str, uint8_t *msg)
+uint8_t encodeBresser7In1Payload(uint8_t *msg)
 {
-  uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
-  uint8_t syncword[] = {0x2D, 0xD4};
-
-  memcpy(msg, preamble, 4);
-  memcpy(&msg[4], syncword, 2);
-
-  uint8_t payload[] = {0xC4, 0xD6, 0x3A, 0xC5, 0xBD, 0xFA, 0x18, 0xAA, 0xAA, 0xAA, 0xAA, 0xAB, 0xFC,
-                       0xAA, 0x98, 0xDA, 0x89, 0xA3, 0x2F, 0xEC, 0xAF, 0x9A, 0xAA, 0xAA, 0xAA, 0x00};
+  uint8_t payload[26] = {0};
 
   // LFSR-16 digest, generator 0x8810 key 0xba95 final xor 0x6df1
-  //int chkdgst = (msgw[0] << 8) | msgw[1];
-  for (int i=2; i < 26; i++) {
+  // int chkdgst = (msgw[0] << 8) | msgw[1];
+  for (int i = 2; i < 26; i++)
+  {
     payload[i] ^= 0xAA;
   }
-  int digest  = lfsr_digest16(&payload[2], 23, 0x8810, 0xba95); // bresser_7in1
-  
-  for (int i=0; i < 26; i++) {
+  int digest = lfsr_digest16(&payload[2], 23, 0x8810, 0xba95); // bresser_7in1
+
+  for (int i = 0; i < 26; i++)
+  {
     payload[i] ^= 0xAA;
   }
   log_d("Digest: 0x%04X", digest ^ 0xAAAA ^ 0x6df1);
 
-  memcpy(&msg[6], payload, 26);
+  memcpy(msg, payload, 26);
 
   // Return message size
-  return 4 + 2 + 26;
+  return 26;
 }
 
 /**
@@ -618,65 +702,9 @@ The data has a whitening of 0xaa.
 
 First two bytes are an LFSR-16 digest, generator 0x8810 key 0xabf9 with a final xor 0x899e
 */
-uint8_t encodeBresserLightningPayload(String msg_str, uint8_t *msg)
+uint8_t encodeBresserLightningPayload(uint8_t *msg)
 {
-  uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
-  uint8_t syncword[] = {0x2D, 0xD4};
-
-  memcpy(msg, preamble, 4);
-  memcpy(&msg[4], syncword, 2);
-
-#if defined(DATA_RAW)
-  uint8_t payload[] = {0x73, 0x69, 0xB5, 0x08, 0xAA, 0xA2, 0x90, 0xAA, 0xAA, 0xAA, 0x00, 0x00, 0x00,
-                       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-
-#elif defined(DATA_GEN)
-  uint8_t payload[26];
-  ws.genMessage(0 /* slot */, 0xffff /* id */, SENSOR_TYPE_LIGHTNING /* s_type */);
-
-#elif defined(DATA_JSON_CONST)
-  uint8_t payload[26];
-  StaticJsonDocument<256> doc;
-  const char json[] =
-      "{\"sensor_id\":65535,\"s_type\":9,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"strike_count\":22,\
-        \"distance_km\":44}";
-
-  // Deserialize the JSON document
-  DeserializationError error = deserializeJson(doc, json);
-
-#elif defined(DATA_JSON_INPUT)
-  if (!msg_str.length())
-  {
-    return 0;
-  }
-
-  uint8_t payload[26];
-  StaticJsonDocument<256> doc;
-
-  // Deserialize the JSON document
-  DeserializationError error = deserializeJson(doc, msg_str.c_str());
-
-#endif
-
-#if defined(DATA_JSON_INPUT) || defined(DATA_JSON_CONST)
-  // Test if parsing succeeded
-  if (error)
-  {
-    log_e("DeserializeJson() failed: %s", error.f_str());
-    return 0;
-  }
-
-  ws.sensor[0].sensor_id = doc["sensor_id"];
-  ws.sensor[0].s_type = doc["s_type"];
-  ws.sensor[0].chan = doc["chan"];
-  ws.sensor[0].startup = doc["startup"];
-  ws.sensor[0].battery_ok = doc["battery_ok"];
-  ws.sensor[0].lgt.strike_count = doc["strike_count"];
-  ws.sensor[0].lgt.distance_km = doc["distance_km"];
-
-#endif
-
-#if !defined(DATA_RAW)
+  uint8_t payload[10] = {0};
 
   payload[2] = (ws.sensor[0].sensor_id >> 8) & 0xFF;
   payload[3] = ws.sensor[0].sensor_id & 0xFF;
@@ -703,8 +731,6 @@ uint8_t encodeBresserLightningPayload(String msg_str, uint8_t *msg)
   payload[8] = 0;
   payload[9] = 0;
 
-#endif
-
   int crc = crc16(&payload[2], 7, 0x1021 /* polynomial */, 0 /* init */);
   log_d("CRC: 0x%04X", crc);
   crc ^= 0x899e;
@@ -717,10 +743,10 @@ uint8_t encodeBresserLightningPayload(String msg_str, uint8_t *msg)
     payload[i] ^= 0xAA;
   }
 
-  memcpy(&msg[6], payload, 10);
+  memcpy(msg, payload, 10);
 
   // Return message size
-  return 4 + 2 + 10;
+  return 10;
 }
 
 /**
@@ -765,28 +791,21 @@ uint8_t encodeBresserLightningPayload(String msg_str, uint8_t *msg)
  * - The ID changes on power-up/reset
  * - NSTARTUP changes from 0 to 1 approx. one hour after power-on/reset
  */
-uint8_t encodeBresserLeakagePayload(String msg_str, uint8_t *msg)
+uint8_t encodeBresserLeakagePayload(uint8_t *msg)
 {
-  uint8_t preamble[] = {0xAA, 0xAA, 0xAA, 0xAA};
-  uint8_t syncword[] = {0x2D, 0xD4};
+  uint8_t payload[26] = {0};
 
-  memcpy(msg, preamble, 4);
-  memcpy(&msg[4], syncword, 2);
-
-  uint8_t payload[] = {0xB3, 0xDA, 0x55, 0x57, 0x17, 0x40, 0x53, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00,
-                       0x00, 0x00, 0x00, 0x03, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFB};
-
-  memcpy(&msg[6], payload, 26);
+  memcpy(msg, payload, 26);
 
   // Return message size
-  return 4 + 2 + 26;
+  return 26;
 }
 
 void loop()
 {
   String input_str;
   static String json_str;
-  static Encoders encoder = ENC_BRESSER_7IN1;
+  static Encoders encoder = ENC_BRESSER_6IN1;
   static unsigned tx_interval = TX_INTERVAL;
 
   if (Serial.available())
@@ -857,31 +876,58 @@ void loop()
 
   uint8_t msg_buf[40];
   uint8_t msg_size;
+  bool valid = true;
 
-  switch (encoder)
+  msg_size = msgBegin(msg_buf);
+
+#if defined(DATA_RAW)
+  msg_size += rawPayload(encoder, &msg_buf[msg_size]);
+#elif defined(GEN_DATA)
+  genData(encoder);
+#elif defined(DATA_JSON_CONST)
+  genJson(encoder, json_str);
+#endif
+
+#if defined(DATA_JSON_CONST) || defined(DATA_JSON_INPUT)
+  if (json_str.length() > 0)
   {
-  case ENC_BRESSER_5IN1:
-    msg_size = encodeBresser5In1Payload(json_str, msg_buf);
-    break;
+    valid = deSerialize(encoder, json_str);
+  }
+  else
+  {
+    valid = false;
+  }
+#endif
 
-  case ENC_BRESSER_6IN1:
-    msg_size = encodeBresser6In1Payload(json_str, msg_buf);
-    break;
+  if (valid)
+  {
+    switch (encoder)
+    {
+    case ENC_BRESSER_5IN1:
+      msg_size += encodeBresser5In1Payload(&msg_buf[msg_size]);
+      break;
 
-  case ENC_BRESSER_7IN1:
-    msg_size = encodeBresser7In1Payload(json_str, msg_buf);
-    break;
+    case ENC_BRESSER_6IN1:
+      msg_size += encodeBresser6In1Payload(&msg_buf[msg_size]);
+      break;
 
-  case ENC_BRESSER_LIGHTNING:
-    msg_size = encodeBresserLightningPayload(json_str, msg_buf);
-    break;
+    case ENC_BRESSER_7IN1:
+      msg_size += encodeBresser7In1Payload(&msg_buf[msg_size]);
+      break;
 
-  case ENC_BRESSER_LEAKAGE:
-    msg_size = encodeBresserLeakagePayload(json_str, msg_buf);
-    break;
+    case ENC_BRESSER_LIGHTNING:
+      msg_size = encodeBresserLightningPayload(&msg_buf[msg_size]);
+      break;
 
-  default:
-    log_e("Encoder not implemented!");
+    case ENC_BRESSER_LEAKAGE:
+      msg_size = encodeBresserLeakagePayload(&msg_buf[msg_size]);
+      break;
+
+    default:
+      log_e("Encoder not implemented!");
+      msg_size = 0;
+    }
+  } else {
     msg_size = 0;
   }
 
