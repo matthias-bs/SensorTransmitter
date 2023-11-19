@@ -175,7 +175,7 @@ uint8_t rawPayload(Encoders encoder, uint8_t *msg)
 }
 #endif
 
-#if defined(GEN_DATA)
+#if defined(DATA_GEN)
 void genData(Encoders encoder)
 {
   if (encoder == ENC_BRESSER_5IN1)
@@ -582,14 +582,13 @@ uint8_t encodeBresser6In1Payload(uint8_t *msg)
             break;
           }
         }
-        // payload[14] = (int)(ws.sensor[0].soil.moisture / 20.0f * 3.0f);
       }
 
       if (ws.sensor[0].s_type == SENSOR_TYPE_WEATHER1)
       {
         msg_type = 1;
       }
-    }
+    } // msg_type == 0
     else
     {
       snprintf(buf, 8, "%07.1f", ws.sensor[0].w.rain_mm);
@@ -608,7 +607,7 @@ uint8_t encodeBresser6In1Payload(uint8_t *msg)
   snprintf(buf, 8, "%04.1f", ws.sensor[0].w.uv);
   log_d("UV: %04.1f", ws.sensor[0].w.uv);
   payload[15] = ((buf[0] - '0') << 4) | (buf[1] - '0');
-  payload[16] = ((buf[3] - '0') << 4);
+  payload[16] |= ((buf[3] - '0') << 4);
   payload[15] ^= 0xFF;
   payload[16] ^= 0xF0;
 
@@ -882,7 +881,7 @@ void loop()
 
 #if defined(DATA_RAW)
   msg_size += rawPayload(encoder, &msg_buf[msg_size]);
-#elif defined(GEN_DATA)
+#elif defined(DATA_GEN)
   genData(encoder);
 #elif defined(DATA_JSON_CONST)
   genJson(encoder, json_str);
@@ -899,6 +898,7 @@ void loop()
   }
 #endif
 
+#if !defined(DATA_RAW)
   if (valid)
   {
     switch (encoder)
@@ -916,11 +916,11 @@ void loop()
       break;
 
     case ENC_BRESSER_LIGHTNING:
-      msg_size = encodeBresserLightningPayload(&msg_buf[msg_size]);
+      msg_size += encodeBresserLightningPayload(&msg_buf[msg_size]);
       break;
 
     case ENC_BRESSER_LEAKAGE:
-      msg_size = encodeBresserLeakagePayload(&msg_buf[msg_size]);
+      msg_size += encodeBresserLeakagePayload(&msg_buf[msg_size]);
       break;
 
     default:
@@ -930,6 +930,7 @@ void loop()
   } else {
     msg_size = 0;
   }
+#endif
 
   log_i("%s Transmitting packet (%d bytes)... ", TRANSCEIVER_CHIP, msg_size);
   int state = radio.transmit(msg_buf, msg_size);
