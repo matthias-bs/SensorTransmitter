@@ -49,6 +49,7 @@
 //          Added encodeBresser<6In1|7In1|Leakage>Payload() - only raw data input!
 // 20231117 Implemented encodeBresser6In1Payload() (basic functionality)
 // 20231118 encodeBresser6In1Payload(): Added UV index and remaining (known) sensors
+// 20231119 Restructured data generation and encoding
 //
 // ToDo:
 // -
