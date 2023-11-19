@@ -261,8 +261,6 @@ void genJson(Encoders encoder, String &json_str)
 #if defined(DATA_JSON_INPUT) || defined(DATA_JSON_CONST)
 bool deSerialize(Encoders encoder, String json_str)
 {
-
-  uint8_t payload[26];
   StaticJsonDocument<512> doc;
 
   // Deserialize the JSON document
@@ -319,7 +317,7 @@ bool deSerialize(Encoders encoder, String json_str)
     ws.sensor[0].w.uv = doc["uv"];
     ws.sensor[0].w.light_klx = doc["light_klx"];
   }
-  else if (ENC_BRESSER_LIGHTNING)
+  else if (encoder == ENC_BRESSER_LIGHTNING)
   {
     ws.sensor[0].lgt.strike_count = doc["strike_count"];
     ws.sensor[0].lgt.distance_km = doc["distance_km"];
@@ -662,26 +660,27 @@ First two bytes are an LFSR-16 digest, generator 0x8810 key 0xba95 with a final 
 */
 uint8_t encodeBresser7In1Payload(uint8_t *msg)
 {
-  uint8_t payload[26] = {0};
+  // uint8_t payload[26] = {0};
 
-  // LFSR-16 digest, generator 0x8810 key 0xba95 final xor 0x6df1
-  // int chkdgst = (msgw[0] << 8) | msgw[1];
-  for (int i = 2; i < 26; i++)
-  {
-    payload[i] ^= 0xAA;
-  }
-  int digest = lfsr_digest16(&payload[2], 23, 0x8810, 0xba95); // bresser_7in1
+  // // LFSR-16 digest, generator 0x8810 key 0xba95 final xor 0x6df1
+  // // int chkdgst = (msgw[0] << 8) | msgw[1];
+  // for (int i = 2; i < 26; i++)
+  // {
+  //   payload[i] ^= 0xAA;
+  // }
+  // int digest = lfsr_digest16(&payload[2], 23, 0x8810, 0xba95); // bresser_7in1
 
-  for (int i = 0; i < 26; i++)
-  {
-    payload[i] ^= 0xAA;
-  }
-  log_d("Digest: 0x%04X", digest ^ 0xAAAA ^ 0x6df1);
+  // for (int i = 0; i < 26; i++)
+  // {
+  //   payload[i] ^= 0xAA;
+  // }
+  // log_d("Digest: 0x%04X", digest ^ 0xAAAA ^ 0x6df1);
 
-  memcpy(msg, payload, 26);
+  // memcpy(msg, payload, 26);
 
-  // Return message size
-  return 26;
+  // // Return message size
+  // return 26;
+  return 0;
 }
 
 /**
