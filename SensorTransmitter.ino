@@ -582,6 +582,18 @@ uint8_t encodeBresser7In1Payload(String msg_str, uint8_t *msg)
   uint8_t payload[] = {0xC4, 0xD6, 0x3A, 0xC5, 0xBD, 0xFA, 0x18, 0xAA, 0xAA, 0xAA, 0xAA, 0xAB, 0xFC,
                        0xAA, 0x98, 0xDA, 0x89, 0xA3, 0x2F, 0xEC, 0xAF, 0x9A, 0xAA, 0xAA, 0xAA, 0x00};
 
+  // LFSR-16 digest, generator 0x8810 key 0xba95 final xor 0x6df1
+  //int chkdgst = (msgw[0] << 8) | msgw[1];
+  for (int i=2; i < 26; i++) {
+    payload[i] ^= 0xAA;
+  }
+  int digest  = lfsr_digest16(&payload[2], 23, 0x8810, 0xba95); // bresser_7in1
+  
+  for (int i=0; i < 26; i++) {
+    payload[i] ^= 0xAA;
+  }
+  log_d("Digest: 0x%04X", digest ^ 0xAAAA ^ 0x6df1);
+
   memcpy(&msg[6], payload, 26);
 
   // Return message size
@@ -774,7 +786,7 @@ void loop()
 {
   String input_str;
   static String json_str;
-  static Encoders encoder = ENC_BRESSER_6IN1;
+  static Encoders encoder = ENC_BRESSER_7IN1;
   static unsigned tx_interval = TX_INTERVAL;
 
   if (Serial.available())
