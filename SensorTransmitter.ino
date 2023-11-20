@@ -50,6 +50,7 @@
 // 20231117 Implemented encodeBresser6In1Payload() (basic functionality)
 // 20231118 encodeBresser6In1Payload(): Added UV index and remaining (known) sensors
 // 20231119 Restructured data generation and encoding
+// 20231120 Implemented encodeBresser7In1Payload()
 //
 // ToDo:
 // -
@@ -214,17 +215,17 @@ void genJson(Encoders encoder, String &json_str)
       \"humidity\":44,\"wind_gust_meter_sec\":3.3,\"wind_avg_meter_sec\":2.2,\"wind_direction_deg\":111.1,\
       \"rain_mm\":123.4}";
 
-  const String json_6in1 = 
+  const String json_6in1 =
       "{\"sensor_id\":4294967295,\"s_type\":1,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"temp_c\":12.3,\
       \"humidity\":44,\"wind_gust_meter_sec\":3.3,\"wind_avg_meter_sec\":2.2,\"wind_direction_deg\":111.1,\
       \"rain_mm\":12345.6,\"uv\":7.8}";
 
-  const String json_7in1 = 
+  const String json_7in1 =
       "{\"sensor_id\":65535,\"s_type\":1,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"temp_c\":12.3,\
       \"humidity\":44,\"wind_gust_meter_sec\":3.3,\"wind_avg_meter_sec\":2.2,\"wind_direction_deg\":111.1,\
       \"rain_mm\":12345.6}";
 
-  const String json_lightning = 
+  const String json_lightning =
       "{\"sensor_id\":65535,\"s_type\":9,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"strike_count\":22,\
       \"distance_km\":44}";
 
@@ -308,14 +309,22 @@ bool deSerialize(Encoders encoder, String json_str)
   }
   else if (encoder == ENC_BRESSER_7IN1)
   {
-    ws.sensor[0].w.temp_c = doc["temp_c"];
-    ws.sensor[0].w.humidity = doc["humidity"];
-    ws.sensor[0].w.wind_gust_meter_sec = doc["wind_gust_meter_sec"];
-    ws.sensor[0].w.wind_avg_meter_sec = doc["wind_avg_meter_sec"];
-    ws.sensor[0].w.wind_direction_deg = doc["wind_direction_deg"];
-    ws.sensor[0].w.rain_mm = doc["rain_mm"];
-    ws.sensor[0].w.uv = doc["uv"];
-    ws.sensor[0].w.light_klx = doc["light_klx"];
+    if (ws.sensor[0].s_type == SENSOR_TYPE_WEATHER1)
+    {
+      ws.sensor[0].w.temp_c = doc["temp_c"];
+      ws.sensor[0].w.humidity = doc["humidity"];
+      ws.sensor[0].w.wind_gust_meter_sec = doc["wind_gust_meter_sec"];
+      ws.sensor[0].w.wind_avg_meter_sec = doc["wind_avg_meter_sec"];
+      ws.sensor[0].w.wind_direction_deg = doc["wind_direction_deg"];
+      ws.sensor[0].w.rain_mm = doc["rain_mm"];
+      ws.sensor[0].w.uv = doc["uv"];
+      ws.sensor[0].w.light_klx = doc["light_klx"];
+    }
+    else if (ws.sensor[0].s_type == SENSOR_TYPE_AIR_PM)
+    {
+      ws.sensor[0].pm.pm_2_5 = doc["pm_2_5"];
+      ws.sensor[0].pm.pm_10 = doc["pm_10"];
+    }
   }
   else if (encoder == ENC_BRESSER_LIGHTNING)
   {
@@ -660,27 +669,101 @@ First two bytes are an LFSR-16 digest, generator 0x8810 key 0xba95 with a final 
 */
 uint8_t encodeBresser7In1Payload(uint8_t *msg)
 {
-  // uint8_t payload[26] = {0};
+  char buf[8];
+  uint8_t payload[26] = {0};
 
-  // // LFSR-16 digest, generator 0x8810 key 0xba95 final xor 0x6df1
-  // // int chkdgst = (msgw[0] << 8) | msgw[1];
+  payload[2] = (ws.sensor[0].sensor_id >> 8) & 0xFF;
+  payload[3] = (ws.sensor[0].sensor_id) & 0xFF;
+  payload[15] = (ws.sensor[0].battery_ok ? 0 : 4) ^ 0xAA;
+  payload[6] = ws.sensor[0].s_type << 4;
+  payload[6] |= (!ws.sensor[0].startup) << 3 | ws.sensor[0].chan;
+  payload[6] ^= 0xAA;
+
+  if (ws.sensor[0].s_type == SENSOR_TYPE_WEATHER1)
+  {
+    snprintf(buf, 7, "%03d", (int)ws.sensor[0].w.wind_direction_deg);
+    log_d("Wind dir: %03d", (int)ws.sensor[0].w.wind_direction_deg);
+    payload[4] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+    payload[5] = (buf[2] - '0') << 4;
+
+    // payload[6] |= (ws.sensor[0].startup ? 0 : 8) | ws.sensor[0].chan;
+
+    snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_gust_meter_sec);
+    log_d("Wind gust: %04.1f", ws.sensor[0].w.wind_gust_meter_sec);
+    payload[7] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+    payload[8] = (buf[3] - '0') << 4;
+
+    snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_avg_meter_sec);
+    log_d("Wind avg: %04.1f", ws.sensor[0].w.wind_avg_meter_sec);
+    payload[9] = ((buf[1] - '0') << 4) | (buf[3] - '0');
+    payload[8] |= buf[0] - '0';
+
+    snprintf(buf, 8, "%07.1f", ws.sensor[0].w.rain_mm);
+    log_d("Rain: %07.1f", ws.sensor[0].w.rain_mm);
+    payload[10] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+    payload[11] = ((buf[2] - '0') << 4) | (buf[3] - '0');
+    payload[12] = ((buf[4] - '0') << 4) | (buf[6] - '0');
+
+    float temp_c = ws.sensor[0].w.temp_c;
+    log_d("Temp: %04.1f", temp_c);
+    if (temp_c < 0)
+    {
+      temp_c += 100;
+    }
+    snprintf(buf, 7, "%04.1f", temp_c);
+    payload[14] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+    payload[15] |= ((buf[3] - '0') << 4);
+
+    snprintf(buf, 7, "%02d", ws.sensor[0].w.humidity);
+    payload[16] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+
+    snprintf(buf, 8, "%04.1f", ws.sensor[0].w.uv);
+    log_d("UV: %04.1f", ws.sensor[0].w.uv);
+    payload[20] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+    payload[21] |= ((buf[3] - '0') << 4);
+
+    snprintf(buf, 8, "%06d", (int)(ws.sensor[0].w.light_klx * 1000));
+    log_d("Light: %06d", (int)(ws.sensor[0].w.light_klx * 1000));
+    payload[17] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+    payload[18] = ((buf[2] - '0') << 4) | (buf[3] - '0');
+    payload[19] = ((buf[4] - '0') << 4) | (buf[5] - '0');
+  }
+  else if (ws.sensor[0].s_type == SENSOR_TYPE_AIR_PM)
+  {
+    snprintf(buf, 8, "%04d", ws.sensor[0].pm.pm_2_5);
+    log_d("PM2.5: %04d", ws.sensor[0].pm.pm_2_5);
+    payload[10] = (buf[0] - '0');
+    payload[11] = ((buf[1] - '0') << 4) | (buf[2] - '0');
+    payload[12] = ((buf[3] - '0') << 4);
+
+    snprintf(buf, 8, "%04d", ws.sensor[0].pm.pm_10);
+    log_d("PM10: %04d", ws.sensor[0].pm.pm_10);
+    payload[12] = (buf[0] - '0');
+    payload[13] = ((buf[1] - '0') << 4) | (buf[2] - '0');
+    payload[14] = ((buf[3] - '0') << 4);
+  }
+
+  // LFSR-16 digest, generator 0x8810 key 0xba95 final xor 0x6df1
+  // int chkdgst = (msgw[0] << 8) | msgw[1];
   // for (int i = 2; i < 26; i++)
   // {
   //   payload[i] ^= 0xAA;
   // }
-  // int digest = lfsr_digest16(&payload[2], 23, 0x8810, 0xba95); // bresser_7in1
+  int digest = lfsr_digest16(&payload[2], 23, 0x8810, 0xba95);
+  digest ^= 0x6df1;
+  payload[0] = digest >> 8;
+  payload[1] = digest & 0xFF;
 
-  // for (int i = 0; i < 26; i++)
-  // {
-  //   payload[i] ^= 0xAA;
-  // }
+  for (int i = 0; i < 26; i++)
+  {
+    payload[i] ^= 0xAA;
+  }
   // log_d("Digest: 0x%04X", digest ^ 0xAAAA ^ 0x6df1);
 
-  // memcpy(msg, payload, 26);
+  memcpy(msg, payload, 26);
 
-  // // Return message size
-  // return 26;
-  return 0;
+  // Return message size
+  return 26;
 }
 
 /**
@@ -836,7 +919,6 @@ void loop()
       {
         encoder = ENC_BRESSER_7IN1;
         log_i("Encoder: Bresser 7-in-1");
-        log_w("This encoder can currently only send raw data!");
       }
       else if (input_str.substring(pos + 1).startsWith("bresser-lightning"))
       {
@@ -927,7 +1009,9 @@ void loop()
       log_e("Encoder not implemented!");
       msg_size = 0;
     }
-  } else {
+  }
+  else
+  {
     msg_size = 0;
   }
 #endif
