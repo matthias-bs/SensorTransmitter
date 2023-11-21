@@ -51,6 +51,7 @@
 // 20231118 encodeBresser6In1Payload(): Added UV index and remaining (known) sensors
 // 20231119 Restructured data generation and encoding
 // 20231120 Implemented encodeBresser7In1Payload()
+// 20231121 Implemented encodeBresserLeakage() - CRC errors at receiver
 //
 // ToDo:
 // -
@@ -229,8 +230,7 @@ void genJson(Encoders encoder, String &json_str)
       "{\"sensor_id\":65535,\"s_type\":9,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"strike_count\":22,\
       \"distance_km\":44}";
 
-  // TBD
-  const String json_leakage = "{}";
+  const String json_leakage = "{\"sensor_id\":4294967295,\"s_type\":5,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"alarm\":1}";
 
   if (encoder == ENC_BRESSER_5IN1)
   {
@@ -248,10 +248,10 @@ void genJson(Encoders encoder, String &json_str)
   {
     json_str = json_lightning;
   }
-  // else if (encoder == ENC_BRESSER_LEAKAGE)
-  // {
-
-  // }
+  else if (encoder == ENC_BRESSER_LEAKAGE)
+  {
+    json_str = json_leakage;
+  }
   else
   {
     log_e("Encoder not supported!");
@@ -331,9 +331,10 @@ bool deSerialize(Encoders encoder, String json_str)
     ws.sensor[0].lgt.strike_count = doc["strike_count"];
     ws.sensor[0].lgt.distance_km = doc["distance_km"];
   }
-  // else if (ENC_BRESSER_LEAKAGE)
-  // {
-  //}
+  else if (ENC_BRESSER_LEAKAGE)
+  {
+    ws.sensor[0].leak.alarm = doc["alarm"];
+  }
   else
   {
     log_e("Encoder not supported!");
@@ -875,12 +876,39 @@ uint8_t encodeBresserLightningPayload(uint8_t *msg)
  */
 uint8_t encodeBresserLeakagePayload(uint8_t *msg)
 {
-  uint8_t payload[26] = {0};
+  uint8_t payload[10] = {0x00};
 
-  memcpy(msg, payload, 26);
+  payload[2] = ws.sensor[0].sensor_id >> 24;
+  payload[3] = (ws.sensor[0].sensor_id >> 16) & 0xFF;
+  payload[4] = (ws.sensor[0].sensor_id >> 8) & 0xFF;
+  payload[5] = (ws.sensor[0].sensor_id) & 0xFF;
+  payload[6] = ws.sensor[0].s_type << 4;
+  payload[6] |= (ws.sensor[0].startup ? 0 : 8) | ws.sensor[0].chan;
+  if (ws.sensor[0].battery_ok) {
+    payload[7] = 0x30;
+  } else {
+    payload[7] = 0x00;
+  }
+
+  if (ws.sensor[0].leak.alarm)
+  {
+    payload[7] |= 8;
+  }
+  else
+  {
+    payload[7] |= 4;
+  }
+
+  uint16_t crc = crc16(&payload[2], 5, 0x1021, 0x0000);
+  log_d("CRC: 0x%04X", crc);
+
+  payload[0] = crc >> 8;
+  payload[1] = crc & 0xFF;
+
+  memcpy(msg, payload, 10);
 
   // Return message size
-  return 26;
+  return 10;
 }
 
 void loop()
@@ -931,7 +959,6 @@ void loop()
         log_i("Encoder: Bresser Leakage");
         log_w("This encoder can currently only send raw data!");
       }
-
       else
       {
         log_w("Unknown encoder!");
