@@ -331,7 +331,7 @@ bool deSerialize(Encoders encoder, String json_str)
     ws.sensor[0].lgt.strike_count = doc["strike_count"];
     ws.sensor[0].lgt.distance_km = doc["distance_km"];
   }
-  else if (ENC_BRESSER_LEAKAGE)
+  else if (encoder == ENC_BRESSER_LEAKAGE)
   {
     ws.sensor[0].leak.alarm = doc["alarm"];
   }
