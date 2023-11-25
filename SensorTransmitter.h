@@ -61,9 +61,13 @@
 
 #define TX_INTERVAL 30              //!< transmit interval in seconds
 
-typedef enum Encoders {
-    ENC_BRESSER_5IN1, ENC_BRESSER_6IN1, ENC_BRESSER_7IN1, ENC_BRESSER_LEAKAGE, ENC_BRESSER_LIGHTNING
-} Encoders;
+enum struct Encoders {
+    ENC_BRESSER_5IN1,
+    ENC_BRESSER_6IN1,
+    ENC_BRESSER_7IN1,
+    ENC_BRESSER_LEAKAGE,
+    ENC_BRESSER_LIGHTNING
+};
 
 // ------------------------------------------------------------------------------------------------
 // --- Board ---

@@ -146,27 +146,27 @@ uint8_t rawPayload(Encoders encoder, uint8_t *msg)
                                  0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x7F, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
   uint8_t payload_leakage[] = {0xB3, 0xDA, 0x55, 0x57, 0x17, 0x40, 0x53, 0x70, 0x00, 0x00, 0x00, 0x00, 0x00,
                                0x00, 0x00, 0x00, 0x03, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFB};
-  if (encoder == ENC_BRESSER_5IN1)
+  if (encoder == Encoders::ENC_BRESSER_5IN1)
   {
     memcpy(msg, payload_5in1, 26);
     return 26;
   }
-  else if (encoder == ENC_BRESSER_6IN1)
+  else if (encoder == Encoders::ENC_BRESSER_6IN1)
   {
     memcpy(msg, payload_6in1, 18);
     return 18;
   }
-  else if (encoder == ENC_BRESSER_7IN1)
+  else if (encoder == Encoders::ENC_BRESSER_7IN1)
   {
     memcpy(msg, payload_7in1, 26);
     return 26;
   }
-  else if (encoder == ENC_BRESSER_LIGHTNING)
+  else if (encoder == Encoders::ENC_BRESSER_LIGHTNING)
   {
     memcpy(msg, payload_lightning, 26);
     return 26;
   }
-  else if (encoder == ENC_BRESSER_LEAKAGE)
+  else if (encoder == Encoders::ENC_BRESSER_LEAKAGE)
   {
     memcpy(msg, payload_leakage, 26);
     return 26;
@@ -174,6 +174,7 @@ uint8_t rawPayload(Encoders encoder, uint8_t *msg)
   else
   {
     log_e("Encoder not supported!");
+    return 0;
   }
 }
 #endif
@@ -181,23 +182,23 @@ uint8_t rawPayload(Encoders encoder, uint8_t *msg)
 #if defined(DATA_GEN)
 void genData(Encoders encoder)
 {
-  if (encoder == ENC_BRESSER_5IN1)
+  if (encoder == Encoders::ENC_BRESSER_5IN1)
   {
     ws.genMessage(0 /* slot */, 0xff /* id */, SENSOR_TYPE_WEATHER0 /* s_type */);
   }
-  else if (encoder == ENC_BRESSER_6IN1)
+  else if (encoder == Encoders::ENC_BRESSER_6IN1)
   {
     ws.genMessage(0 /* slot */, 0xFFFFFFFF /* id */, SENSOR_TYPE_WEATHER1 /* s_type */);
   }
-  else if (encoder == ENC_BRESSER_7IN1)
+  else if (encoder == Encoders::ENC_BRESSER_7IN1)
   {
     ws.genMessage(0 /* slot */, 0xFFFF /* id */, SENSOR_TYPE_WEATHER1 /* s_type */);
   }
-  else if (encoder == ENC_BRESSER_LIGHTNING)
+  else if (encoder == Encoders::ENC_BRESSER_LIGHTNING)
   {
     ws.genMessage(0 /* slot */, 0xFFFF /* id */, SENSOR_TYPE_LIGHTNING /* s_type */);
   }
-  else if (encoder == ENC_BRESSER_LEAKAGE)
+  else if (encoder == Encoders::ENC_BRESSER_LEAKAGE)
   {
     ws.genMessage(0 /* slot */, 0xFFFFFFFF /* id */, SENSOR_TYPE_LEAKAGE /* s_type */);
   }
@@ -232,23 +233,23 @@ void genJson(Encoders encoder, String &json_str)
 
   const String json_leakage = "{\"sensor_id\":4294967295,\"s_type\":5,\"chan\":0,\"startup\":0,\"battery_ok\":1,\"alarm\":1}";
 
-  if (encoder == ENC_BRESSER_5IN1)
+  if (encoder == Encoders::ENC_BRESSER_5IN1)
   {
     json_str = json_5in1;
   }
-  else if (encoder == ENC_BRESSER_6IN1)
+  else if (encoder == Encoders::ENC_BRESSER_6IN1)
   {
     json_str = json_6in1;
   }
-  else if (encoder == ENC_BRESSER_7IN1)
+  else if (encoder == Encoders::ENC_BRESSER_7IN1)
   {
     json_str = json_7in1;
   }
-  else if (encoder == ENC_BRESSER_LIGHTNING)
+  else if (encoder == Encoders::ENC_BRESSER_LIGHTNING)
   {
     json_str = json_lightning;
   }
-  else if (encoder == ENC_BRESSER_LEAKAGE)
+  else if (encoder == Encoders::ENC_BRESSER_LEAKAGE)
   {
     json_str = json_leakage;
   }
@@ -280,7 +281,7 @@ bool deSerialize(Encoders encoder, String json_str)
   ws.sensor[0].startup = doc["startup"];
   ws.sensor[0].battery_ok = doc["battery_ok"];
 
-  if (encoder == ENC_BRESSER_5IN1)
+  if (encoder == Encoders::ENC_BRESSER_5IN1)
   {
     ws.sensor[0].w.temp_c = doc["temp_c"];
     ws.sensor[0].w.humidity = doc["humidity"];
@@ -289,7 +290,7 @@ bool deSerialize(Encoders encoder, String json_str)
     ws.sensor[0].w.wind_direction_deg = doc["wind_direction_deg"];
     ws.sensor[0].w.rain_mm = doc["rain_mm"];
   }
-  else if (encoder == ENC_BRESSER_6IN1)
+  else if (encoder == Encoders::ENC_BRESSER_6IN1)
   {
     if (ws.sensor[0].s_type == SENSOR_TYPE_SOIL)
     {
@@ -307,7 +308,7 @@ bool deSerialize(Encoders encoder, String json_str)
       ws.sensor[0].w.uv = doc["uv"];
     }
   }
-  else if (encoder == ENC_BRESSER_7IN1)
+  else if (encoder == Encoders::ENC_BRESSER_7IN1)
   {
     if (ws.sensor[0].s_type == SENSOR_TYPE_WEATHER1)
     {
@@ -326,12 +327,12 @@ bool deSerialize(Encoders encoder, String json_str)
       ws.sensor[0].pm.pm_10 = doc["pm_10"];
     }
   }
-  else if (encoder == ENC_BRESSER_LIGHTNING)
+  else if (encoder == Encoders::ENC_BRESSER_LIGHTNING)
   {
     ws.sensor[0].lgt.strike_count = doc["strike_count"];
     ws.sensor[0].lgt.distance_km = doc["distance_km"];
   }
-  else if (encoder == ENC_BRESSER_LEAKAGE)
+  else if (encoder == Encoders::ENC_BRESSER_LEAKAGE)
   {
     ws.sensor[0].leak.alarm = doc["alarm"];
   }
@@ -915,7 +916,7 @@ void loop()
 {
   String input_str;
   static String json_str;
-  static Encoders encoder = ENC_BRESSER_6IN1;
+  static Encoders encoder = Encoders::ENC_BRESSER_6IN1;
   static unsigned tx_interval = TX_INTERVAL;
 
   if (Serial.available())
@@ -935,27 +936,27 @@ void loop()
       input_str.toLowerCase();
       if (input_str.substring(pos + 1).startsWith("bresser-5in1"))
       {
-        encoder = ENC_BRESSER_5IN1;
+        encoder = Encoders::ENC_BRESSER_5IN1;
         log_i("Encoder: Bresser 5-in-1");
       }
       else if (input_str.substring(pos + 1).startsWith("bresser-6in1"))
       {
-        encoder = ENC_BRESSER_6IN1;
+        encoder = Encoders::ENC_BRESSER_6IN1;
         log_i("Encoder: Bresser 6-in-1");
       }
       else if (input_str.substring(pos + 1).startsWith("bresser-7in1"))
       {
-        encoder = ENC_BRESSER_7IN1;
+        encoder = Encoders::ENC_BRESSER_7IN1;
         log_i("Encoder: Bresser 7-in-1");
       }
       else if (input_str.substring(pos + 1).startsWith("bresser-lightning"))
       {
-        encoder = ENC_BRESSER_LIGHTNING;
+        encoder = Encoders::ENC_BRESSER_LIGHTNING;
         log_i("Encoder: Bresser Lightning");
       }
       else if (input_str.substring(pos + 1).startsWith("bresser-leakage"))
       {
-        encoder = ENC_BRESSER_LEAKAGE;
+        encoder = Encoders::ENC_BRESSER_LEAKAGE;
         log_i("Encoder: Bresser Leakage");
         log_w("This encoder can currently only send raw data!");
       }
@@ -1012,23 +1013,23 @@ void loop()
   {
     switch (encoder)
     {
-    case ENC_BRESSER_5IN1:
+    case Encoders::ENC_BRESSER_5IN1:
       msg_size += encodeBresser5In1Payload(&msg_buf[msg_size]);
       break;
 
-    case ENC_BRESSER_6IN1:
+    case Encoders::ENC_BRESSER_6IN1:
       msg_size += encodeBresser6In1Payload(&msg_buf[msg_size]);
       break;
 
-    case ENC_BRESSER_7IN1:
+    case Encoders::ENC_BRESSER_7IN1:
       msg_size += encodeBresser7In1Payload(&msg_buf[msg_size]);
       break;
 
-    case ENC_BRESSER_LIGHTNING:
+    case Encoders::ENC_BRESSER_LIGHTNING:
       msg_size += encodeBresserLightningPayload(&msg_buf[msg_size]);
       break;
 
-    case ENC_BRESSER_LEAKAGE:
+    case Encoders::ENC_BRESSER_LEAKAGE:
       msg_size += encodeBresserLeakagePayload(&msg_buf[msg_size]);
       break;
 
