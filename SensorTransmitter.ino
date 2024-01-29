@@ -52,6 +52,7 @@
 // 20231119 Restructured data generation and encoding
 // 20231120 Implemented encodeBresser7In1Payload()
 // 20231121 Implemented encodeBresserLeakage() - CRC errors at receiver
+// 20240129 Fixed lightning counter encoding
 //
 // ToDo:
 // -
@@ -789,12 +790,16 @@ First two bytes are an LFSR-16 digest, generator 0x8810 key 0xabf9 with a final 
 uint8_t encodeBresserLightningPayload(uint8_t *msg)
 {
   uint8_t payload[10] = {0};
+  char buf[5];
 
   payload[2] = (ws.sensor[0].sensor_id >> 8) & 0xFF;
   payload[3] = ws.sensor[0].sensor_id & 0xFF;
 
-  payload[4] = ws.sensor[0].lgt.strike_count >> 4;
-  payload[5] = ws.sensor[0].lgt.strike_count << 4;
+  // Counter encoded as BCD with most significant digit counting up to 15!
+  snprintf(buf, 5, "%04d", ws.sensor[0].lgt.strike_count);
+  log_d("count: %04d", ws.sensor[0].lgt.strike_count);
+  payload[4] = ((ws.sensor[0].lgt.strike_count / 100) << 4) | (buf[2] - '0');
+  payload[5] = (buf[3] - '0') << 4;
 
   if (!ws.sensor[0].battery_ok)
   {
