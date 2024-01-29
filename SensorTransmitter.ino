@@ -796,7 +796,7 @@ uint8_t encodeBresserLightningPayload(uint8_t *msg)
   payload[3] = ws.sensor[0].sensor_id & 0xFF;
 
   // Counter encoded as BCD with most significant digit counting up to 15!
-  snprintf(buf, 5, "%04d", ws.sensor[0].lgt.strike_count);
+  snprintf(buf, 6, "%04d", ws.sensor[0].lgt.strike_count);
   log_d("count: %04d", ws.sensor[0].lgt.strike_count);
   payload[4] = ((ws.sensor[0].lgt.strike_count / 100) << 4) | (buf[2] - '0');
   payload[5] = (buf[3] - '0') << 4;
