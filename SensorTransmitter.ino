@@ -790,7 +790,7 @@ First two bytes are an LFSR-16 digest, generator 0x8810 key 0xabf9 with a final 
 uint8_t encodeBresserLightningPayload(uint8_t *msg)
 {
   uint8_t payload[10] = {0};
-  char buf[5];
+  char buf[6];
 
   payload[2] = (ws.sensor[0].sensor_id >> 8) & 0xFF;
   payload[3] = ws.sensor[0].sensor_id & 0xFF;
