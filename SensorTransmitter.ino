@@ -264,7 +264,7 @@ void genJson(Encoders encoder, String &json_str)
 #if defined(DATA_JSON_INPUT) || defined(DATA_JSON_CONST)
 bool deSerialize(Encoders encoder, String json_str)
 {
-  StaticJsonDocument<512> doc;
+  JsonDocument doc;
 
   // Deserialize the JSON document
   DeserializationError error = deserializeJson(doc, json_str.c_str());
