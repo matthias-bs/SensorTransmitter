@@ -327,6 +327,15 @@ bool deSerialize(Encoders encoder, String json_str)
       ws.sensor[0].pm.pm_2_5 = doc["pm_2_5"];
       ws.sensor[0].pm.pm_10 = doc["pm_10"];
     }
+    else if (ws.sensor[0].s_type == SENSOR_TYPE_CO2)
+    {
+      ws.sensor[0].co2.co2_ppm = doc["co2_ppm"];
+    }
+    else if (ws.sensor[0].s_type == SENSOR_TYPE_HCHO_VOC)
+    {
+      ws.sensor[0].voc.hcho_ppb = doc["hcho_ppb"];
+      ws.sensor[0].voc.voc_level = doc["voc"];
+    }
   }
   else if (encoder == Encoders::ENC_BRESSER_LIGHTNING)
   {
