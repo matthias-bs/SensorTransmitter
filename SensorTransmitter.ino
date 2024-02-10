@@ -755,6 +755,22 @@ uint8_t encodeBresser7In1Payload(uint8_t *msg)
     payload[13] = ((buf[1] - '0') << 4) | (buf[2] - '0');
     payload[14] = ((buf[3] - '0') << 4);
   }
+  else if (ws.sensor[0].s_type == SENSOR_TYPE_CO2)
+  {
+    snprintf(buf, 8, "%04u", ws.sensor[0].co2.co2_ppm);
+    log_d("CO2: %04u", ws.sensor[0].co2.co2_ppm);
+    payload[4] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+    payload[4] = ((buf[2] - '0') << 4) | (buf[3] - '0');
+  }
+  else if (ws.sensor[0].s_type == SENSOR_TYPE_HCHO_VOC)
+  {
+    snprintf(buf, 8, "%04u", ws.sensor[0].voc.hcho_ppb);
+    log_d("HCHO: %04u", ws.sensor[0].voc.hcho);
+    payload[4] = ((buf[0] - '0') << 4) | (buf[1] - '0');
+    payload[4] = ((buf[2] - '0') << 4) | (buf[3] - '0');
+    log_d("VOC: %u", ws.sensor[0].voc.voc_level);
+    payload[22] = ws.sensor[0].voc.voc_level;
+  }
 
   // LFSR-16 digest, generator 0x8810 key 0xba95 final xor 0x6df1
   // int chkdgst = (msgw[0] << 8) | msgw[1];
