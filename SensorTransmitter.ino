@@ -54,6 +54,7 @@
 // 20231121 Implemented encodeBresserLeakage() - CRC errors at receiver
 // 20240129 Fixed lightning counter encoding
 // 20240209 Added CO2 and HCHO/VOC sensors
+// 20240210 Added missing CO2 and HCHO/VOC sensor encoding
 //
 // ToDo:
 // -
