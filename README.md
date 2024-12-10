@@ -103,10 +103,14 @@ Select option in [SensorTransmitter.h](SensorTransmitter.h).
 
 ## Serial Port Control
 
-**Note:** No additional spaces are allowed in commands! (But spaces are permitted in JSON strings.)
+> [!NOTE]
+> No additional spaces are allowed in commands! (But spaces are permitted in JSON strings.)
 
 | Command                 | Examples                                      | Description           |
 | ----------------------- | --------------------------------------------- | --------------------- |
 | `{...}`                 | see above                                     | Set JSON message data |  
 | `enc[oder]=<encoder>`   | `enc=bresser-5in1`<br>`enc=bresser-6in1`<br>`enc=bresser-7in1`<br>`enc=bresser-lightning`<br>`enc=bresser-leakage` | Select encoder        |
 | `int[erval]=<interval>` | `int=20`                                      | Set transmit interval in seconds<br>(must be > 10) |
+
+> [!NOTE]
+> To allow reception by an original weather station console, it might be required to set the transmit interval to the value used by the specific type of sensor which is emulated.
