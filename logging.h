@@ -50,7 +50,7 @@
 #ifndef LOGGING_H
 #define LOGGING_H
 
-#if defined(ESP8266) || defined(ARDUINO_ARCH_RP2040)
+#if defined(ESP8266) || defined(ARDUINO_ARCH_RP2040) || defined(ARDUINO_ARCH_AVR)
 
     #if defined(ARDUINO_ARCH_RP2040) && defined(DEBUG_RP2040_PORT)
         #define DEBUG_PORT DEBUG_RP2040_PORT

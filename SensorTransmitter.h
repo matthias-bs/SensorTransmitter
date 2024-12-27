@@ -39,6 +39,7 @@
 // 20231113 Added JSON string input from serial console
 //          Added TRANSCEIVER_CHIP
 // 20231114 Added enum Encoders
+// 20241227 Added LilyGo T3 S3 SX1262/SX1276/LR1121
 //
 // ToDo:
 // -
@@ -50,7 +51,7 @@
 
 #include <Arduino.h>
 
-#define NUM_SENSORS 1               //!< WeatherSensor - no. of sensors
+#define MAX_SENSORS_DEFAULT 1       //!< WeatherSensor - no. of sensors
 #define WIND_DATA_FLOATINGPOINT     //!< WeatherSensor - wind data type
 
 //!< Select one of the following data sources
@@ -138,11 +139,38 @@ enum struct Encoders {
     #pragma message("ARDUINO_TTGO_LoRa32_V21new defined; using on-board transceiver")
     #define USE_SX1276
 
-#elif defined(ARDUINO_heltec_wireless_stick)
+#elif defined(ARDUINO_LILYGO_T3S3_SX1262)
+    // https://github.com/espressif/arduino-esp32/blob/master/variants/lilygo_t3_s3_sx1262/pins_arduino.h
+    #pragma message("ARDUINO_LILYGO_T3S3_SX1262 defined; using on-board transceiver")
+    #define USE_SX1262
+    #define PIN_RECEIVER_CS   LORA_CS
+    #define PIN_RECEIVER_IRQ  LORA_IRQ
+    #define PIN_RECEIVER_GPIO LORA_BUSY
+    #define PIN_RECEIVER_RST  LORA_RST
+
+#elif defined(ARDUINO_LILYGO_T3S3_SX1276)
+    // https://github.com/espressif/arduino-esp32/blob/master/variants/lilygo_t3_s3_sx127x/pins_arduino.h
+    #pragma message("ARDUINO_LILYGO_T3S3_SX1276 defined; using on-board transceiver")
+    #define USE_SX1276
+    #define PIN_RECEIVER_CS   LORA_CS
+    #define PIN_RECEIVER_IRQ  LORA_IRQ
+    #define PIN_RECEIVER_GPIO LORA_BUSY
+    #define PIN_RECEIVER_RST  LORA_RST
+
+#elif defined(ARDUINO_LILYGO_T3S3_LR1121)
+    // https://github.com/espressif/arduino-esp32/blob/master/variants/lilygo_t3_s3_lr1121/pins_arduino.h
+    #pragma message("ARDUINO_LILYGO_T3S3_LR1121 defined; using on-board transceiver")
+    #define USE_LR1121
+    #define PIN_RECEIVER_CS   LORA_CS
+    #define PIN_RECEIVER_IRQ  LORA_IRQ
+    #define PIN_RECEIVER_GPIO LORA_BUSY
+    #define PIN_RECEIVER_RST  LORA_RST
+
+#elif defined(ARDUINO_HELTEC_WIRELESS_STICK)
     #pragma message("ARDUINO_heltec_wireless_stick defined; using on-board transceiver")
     #define USE_SX1276
 
-#elif defined(ARDUINO_heltec_wifi_lora_32_V2)
+#elif defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
     #pragma message("ARDUINO_heltec_wifi_lora_32_V2 defined; using on-board transceiver")
     #define USE_SX1276
 
@@ -164,7 +192,7 @@ enum struct Encoders {
     #define USE_SX1276
     #pragma message("Required wiring: A to RST, B to DIO1, D to DIO0, E to CS")
 
-#elif defined(ARDUINO_ESP32_DEV)
+#elif defined(ARDUINO_DFROBOT_FIREBEETLE_ESP32)
     //#define LORAWAN_NODE
     #define FIREBEETLE_ESP32_COVER_LORA
 
@@ -178,35 +206,57 @@ enum struct Encoders {
         #define USE_SX1276
 
     #else
-        #pragma message("ARDUINO_ESP32_DEV defined; select either LORAWAN_NODE or FIREBEETLE_ESP32_COVER_LORA manually!")
+        #pragma message("ARDUINO_DFROBOT_FIREBEETLE_ESP32 defined; select either LORAWAN_NODE or FIREBEETLE_ESP32_COVER_LORA manually!")
         
     #endif
+
+#elif defined(ESP32)
+    #pragma message("ESP32 defined; this is a generic (i.e. non-specific) target")
+    #pragma message("Cross check if the selected GPIO pins are really available on your board.")
+    #pragma message("Connect a radio module with a supported chip.")
+    #pragma message("Select the chip by setting the appropriate define.")
+    #define USE_SX1276
+    //#define USE_SX1262
+    //#define USE_CC1101
+    //#define USE_LR1121
+    // Generic pinning for ESP32 development boards
+    #define PIN_RECEIVER_CS   27
+    #define PIN_RECEIVER_IRQ  21
+    #define PIN_RECEIVER_GPIO 33
+    #define PIN_RECEIVER_RST  32
+
+#elif defined(ESP8266)
+    #pragma message("ESP8266 defined; this is a generic (i.e. non-specific) target")
+    #pragma message("Cross check if the selected GPIO pins are really available on your board.")
+    #pragma message("Connect a radio module with a supported chip.")
+    #pragma message("Select the chip by setting the appropriate define.")
+    //#define USE_SX1276
+    //#define USE_SX1262
+    #define USE_CC1101
+    //#define USE_LR1121
+
+    // Generic pinning for ESP8266 development boards (e.g. LOLIN/WEMOS D1 mini)
+    #define PIN_RECEIVER_CS   15
+    #define PIN_RECEIVER_IRQ  4
+    #define PIN_RECEIVER_GPIO 5
+    #define PIN_RECEIVER_RST  2
+
 #endif
 
 
 // ------------------------------------------------------------------------------------------------
 // --- Radio Transceiver ---
 // ------------------------------------------------------------------------------------------------
-// Select type of receiver module (if not yet defined based on the assumptions above)
-#if ( !defined(USE_CC1101) && !defined(USE_SX1276) )
-    #define USE_CC1101
-    //#define USE_SX1276
-#endif
-
-#if ( (defined(USE_CC1101) && defined(USE_SX1276)) || \
-      (defined(USE_SX1276) && defined(USE_SX1262)) || \
-      (defined(USE_SX1262) && defined(USE_CC1101)) )
-    #error "Either USE_CC1101 OR USE_SX1276 OR USE_SX1262 must be defined!"
-#endif
-
 #if defined(USE_CC1101)
     #define TRANSCEIVER_CHIP "[CC1101]"
 #elif defined(USE_SX1276)
     #define TRANSCEIVER_CHIP "[SX1276]"
 #elif defined(USE_SX1262)
     #define TRANSCEIVER_CHIP "[SX1262]"
+#elif defined(USE_LR1121)
+    #define TRANSCEIVER_CHIP "[LR1121]"
 #else
-    #error "Either USE_CC1101, USE_SX1276 or USE_SX1262 must be defined!"
+    #error "Either USE_CC1101, USE_SX1276, USE_SX1262 or USE_LR1121 must be defined!"
 #endif
 
 // Arduino default SPI pins
