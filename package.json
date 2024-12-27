@@ -1,7 +1,7 @@
 {
   "name": "SensorTransmitter",
-  "version": "0.7.1",
-  "description": "Sensor Data FSK Transmitter based on RadioLib using SX1276 or CC1101",
+  "version": "0.8.1",
+  "description": "Sensor Data FSK Transmitter based on RadioLib using SX1276, CC1101, SX1262 or LR1121",
   "main": "SensorTransmitter.ino",
   "frameworks": "arduino",
   "platforms": [
@@ -22,8 +22,8 @@
   },
   "homepage": "https://github.com/matthias-bs/SensorTransmitter#README",
   "dependencies": {
-    "RadioLib": "jgromes/RadioLib#semver:^6.4.2",
-    "BresserWeatherSensorReceiver": "matthias-bs/BresserWeatherSensorReceiver#semver:^0.23.0",
-    "ArduinoJson": "bblanchon/ArduinoJson#semver:^7.0.3"   
+    "RadioLib": "jgromes/RadioLib#semver:^7.1.1",
+    "BresserWeatherSensorReceiver": "matthias-bs/BresserWeatherSensorReceiver#semver:^0.29.0",
+    "ArduinoJson": "bblanchon/ArduinoJson#semver:^7.2.1"   
   }
 }
