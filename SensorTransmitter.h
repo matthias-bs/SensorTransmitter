@@ -210,6 +210,37 @@ enum struct Encoders {
         
     #endif
 
+#elif defined(ESP32)
+    #pragma message("ESP32 defined; this is a generic (i.e. non-specific) target")
+    #pragma message("Cross check if the selected GPIO pins are really available on your board.")
+    #pragma message("Connect a radio module with a supported chip.")
+    #pragma message("Select the chip by setting the appropriate define.")
+    #define USE_SX1276
+    //#define USE_SX1262
+    //#define USE_CC1101
+    //#define USE_LR1121
+    // Generic pinning for ESP32 development boards
+    #define PIN_RECEIVER_CS   27
+    #define PIN_RECEIVER_IRQ  21
+    #define PIN_RECEIVER_GPIO 33
+    #define PIN_RECEIVER_RST  32
+
+#elif defined(ESP8266)
+    #pragma message("ESP8266 defined; this is a generic (i.e. non-specific) target")
+    #pragma message("Cross check if the selected GPIO pins are really available on your board.")
+    #pragma message("Connect a radio module with a supported chip.")
+    #pragma message("Select the chip by setting the appropriate define.")
+    //#define USE_SX1276
+    //#define USE_SX1262
+    #define USE_CC1101
+    //#define USE_LR1121
+
+    // Generic pinning for ESP8266 development boards (e.g. LOLIN/WEMOS D1 mini)
+    #define PIN_RECEIVER_CS   15
+    #define PIN_RECEIVER_IRQ  4
+    #define PIN_RECEIVER_GPIO 5
+    #define PIN_RECEIVER_RST  2
+
 #endif
 
 
