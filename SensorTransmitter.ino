@@ -55,6 +55,7 @@
 // 20240129 Fixed lightning counter encoding
 // 20240209 Added CO2 and HCHO/VOC sensors
 // 20240210 Added missing CO2 and HCHO/VOC sensor encoding
+// 20241227 Added LilyGo T3 S3 SX1262/SX1276/LR1121
 //
 // ToDo:
 // -
@@ -68,35 +69,74 @@
 #include <ArduinoJson.h> // https://github.com/bblanchon/ArduinoJson
 
 #if defined(USE_CC1101)
-CC1101 radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, RADIOLIB_NC, PIN_TRANSCEIVER_GPIO);
-#endif
-#if defined(USE_SX1276)
+static CC1101 radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, RADIOLIB_NC, PIN_TRANSCEIVER_GPIO);
+#elif defined(USE_SX1276)
 // SX1276 has the following connections:
 // NSS pin:   PIN_TRANSCEIVER_CS
 // DIO0 pin:  PIN_TRANSCEIVER_IRQ
 // RESET pin: PIN_TRANSCEIVER_RST
 // DIO1 pin:  PIN_TRANSCEIVER_GPIO
-SX1276 radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, PIN_TRANSCEIVER_RST, PIN_TRANSCEIVER_GPIO);
+static SX1276 radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, PIN_TRANSCEIVER_RST, PIN_TRANSCEIVER_GPIO);
+#elif defined(USE_SX1262)
+static SX1262 radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, PIN_TRANSCEIVER_RST, PIN_TRANSCEIVER_GPIO);
+#elif defined(USE_LR1121)
+static LR1121 radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, PIN_TRANSCEIVER_RST, PIN_TRANSCEIVER_GPIO);
+#endif
+
+#if defined(ARDUINO_LILYGO_T3S3_SX1262) || defined(ARDUINO_LILYGO_T3S3_SX1276) || defined(ARDUINO_LILYGO_T3S3_LR1121)
+static SPIClass *spi = nullptr;
+#endif
+
+#if defined(ARDUINO_LILYGO_T3S3_LR1121)
+static const uint32_t rfswitch_dio_pins[] = {
+    RADIOLIB_LR11X0_DIO5, RADIOLIB_LR11X0_DIO6,
+    RADIOLIB_NC, RADIOLIB_NC, RADIOLIB_NC
+};
+
+static const Module::RfSwitchMode_t rfswitch_table[] = {
+    // mode                  DIO5  DIO6
+    { LR11x0::MODE_STBY,   { LOW,  LOW  } },
+    { LR11x0::MODE_RX,     { HIGH, LOW  } },
+    { LR11x0::MODE_TX,     { LOW,  HIGH } },
+    { LR11x0::MODE_TX_HP,  { LOW,  HIGH } },
+    { LR11x0::MODE_TX_HF,  { LOW,  LOW  } },
+    { LR11x0::MODE_GNSS,   { LOW,  LOW  } },
+    { LR11x0::MODE_WIFI,   { LOW,  LOW  } },
+    END_OF_MODE_TABLE,
+};
 #endif
 
 void setup()
 {
   Serial.begin(115200);
 
-  // initialize SX1276
+  #if defined(ARDUINO_LILYGO_T3S3_SX1262) || defined(ARDUINO_LILYGO_T3S3_SX1276) || defined(ARDUINO_LILYGO_T3S3_LR1121)
+  spi = new SPIClass(SPI);
+  spi->begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
+  radio = new Module(PIN_RECEIVER_CS, PIN_RECEIVER_IRQ, PIN_RECEIVER_RST, PIN_RECEIVER_GPIO, *spi);
+  #endif
+
+
+
+  // initialize radio
   log_i("%s Initializing ... ", TRANSCEIVER_CHIP);
-// carrier frequency:                   868.3 MHz
-// bit rate:                            8.22 kbps
-// frequency deviation:                 57.136417 kHz
-// Rx bandwidth:                        270.0 kHz (CC1101) / 250 kHz (SX1276)
-// output power:                        10 dBm
-// preamble length:                     40 bits
-// Preamble: AA AA AA AA AA
-// Sync: 2D D4
+  // carrier frequency:                   868.3 MHz
+  // bit rate:                            8.22 kbps
+  // frequency deviation:                 57.136417 kHz
+  // Rx bandwidth:                        270.0 kHz (CC1101) / 250 kHz (SX1276)
+  // output power:                        10 dBm
+  // preamble length:                     40 bits
+  // Preamble: AA AA AA AA AA
+  // Sync: 2D D4
 #ifdef USE_CC1101
   int state = radio.begin(868.3, 8.21, 57.136417, 270, 10, 32);
-#else
+#elif defined(USE_SX1276)
   int state = radio.beginFSK(868.3, 8.21, 57.136417, 250, 10, 32);
+#elif defined(USE_SX1262)
+    int state = radio.beginFSK(868.3, 8.21, 57.136417, 234.3, 10, 32);
+#else
+    // defined(USE_LR1121)
+    int state = radio.beginGFSK(868.3, 8.21, 57.136417, 234.3, 10, 32);
 #endif
   if (state == RADIOLIB_ERR_NONE)
   {
@@ -109,15 +149,13 @@ void setup()
       ;
   }
 
-  // some modules have an external RF switch
-  // controlled via two pins (RX enable, TX enable)
-  // to enable automatic control of the switch,
-  // call the following method
-  // RX enable:   4
-  // TX enable:   5
-  /*
-    radio.setRfSwitchPins(4, 5);
-  */
+#if defined(ARDUINO_LILYGO_T3S3_LR1121)
+  // set RF switch control configuration
+  radio.setRfSwitchTable(rfswitch_dio_pins, rfswitch_table);
+
+  // LR1121 TCXO Voltage 2.85~3.15V
+  radio.setTCXO(3.0);
+#endif
 }
 
 // counter to keep track of transmitted packets

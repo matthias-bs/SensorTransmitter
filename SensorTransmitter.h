@@ -50,7 +50,7 @@
 
 #include <Arduino.h>
 
-#define NUM_SENSORS 1               //!< WeatherSensor - no. of sensors
+#define MAX_SENSORS_DEFAULT 1       //!< WeatherSensor - no. of sensors
 #define WIND_DATA_FLOATINGPOINT     //!< WeatherSensor - wind data type
 
 //!< Select one of the following data sources
@@ -138,6 +138,33 @@ enum struct Encoders {
     #pragma message("ARDUINO_TTGO_LoRa32_V21new defined; using on-board transceiver")
     #define USE_SX1276
 
+#elif defined(ARDUINO_LILYGO_T3S3_SX1262)
+    // https://github.com/espressif/arduino-esp32/blob/master/variants/lilygo_t3_s3_sx1262/pins_arduino.h
+    #pragma message("ARDUINO_LILYGO_T3S3_SX1262 defined; using on-board transceiver")
+    #define USE_SX1262
+    #define PIN_RECEIVER_CS   LORA_CS
+    #define PIN_RECEIVER_IRQ  LORA_IRQ
+    #define PIN_RECEIVER_GPIO LORA_BUSY
+    #define PIN_RECEIVER_RST  LORA_RST
+
+#elif defined(ARDUINO_LILYGO_T3S3_SX1276)
+    // https://github.com/espressif/arduino-esp32/blob/master/variants/lilygo_t3_s3_sx127x/pins_arduino.h
+    #pragma message("ARDUINO_LILYGO_T3S3_SX1276 defined; using on-board transceiver")
+    #define USE_SX1276
+    #define PIN_RECEIVER_CS   LORA_CS
+    #define PIN_RECEIVER_IRQ  LORA_IRQ
+    #define PIN_RECEIVER_GPIO LORA_BUSY
+    #define PIN_RECEIVER_RST  LORA_RST
+
+#elif defined(ARDUINO_LILYGO_T3S3_LR1121)
+    // https://github.com/espressif/arduino-esp32/blob/master/variants/lilygo_t3_s3_lr1121/pins_arduino.h
+    #pragma message("ARDUINO_LILYGO_T3S3_LR1121 defined; using on-board transceiver")
+    #define USE_LR1121
+    #define PIN_RECEIVER_CS   LORA_CS
+    #define PIN_RECEIVER_IRQ  LORA_IRQ
+    #define PIN_RECEIVER_GPIO LORA_BUSY
+    #define PIN_RECEIVER_RST  LORA_RST
+
 #elif defined(ARDUINO_heltec_wireless_stick)
     #pragma message("ARDUINO_heltec_wireless_stick defined; using on-board transceiver")
     #define USE_SX1276
@@ -187,26 +214,16 @@ enum struct Encoders {
 // ------------------------------------------------------------------------------------------------
 // --- Radio Transceiver ---
 // ------------------------------------------------------------------------------------------------
-// Select type of receiver module (if not yet defined based on the assumptions above)
-#if ( !defined(USE_CC1101) && !defined(USE_SX1276) )
-    #define USE_CC1101
-    //#define USE_SX1276
-#endif
-
-#if ( (defined(USE_CC1101) && defined(USE_SX1276)) || \
-      (defined(USE_SX1276) && defined(USE_SX1262)) || \
-      (defined(USE_SX1262) && defined(USE_CC1101)) )
-    #error "Either USE_CC1101 OR USE_SX1276 OR USE_SX1262 must be defined!"
-#endif
-
 #if defined(USE_CC1101)
     #define TRANSCEIVER_CHIP "[CC1101]"
 #elif defined(USE_SX1276)
     #define TRANSCEIVER_CHIP "[SX1276]"
 #elif defined(USE_SX1262)
     #define TRANSCEIVER_CHIP "[SX1262]"
+#elif defined(USE_LR1121)
+    #define TRANSCEIVER_CHIP "[LR1121]"
 #else
-    #error "Either USE_CC1101, USE_SX1276 or USE_SX1262 must be defined!"
+    #error "Either USE_CC1101, USE_SX1276, USE_SX1262 or USE_LR1121 must be defined!"
 #endif
 
 // Arduino default SPI pins
