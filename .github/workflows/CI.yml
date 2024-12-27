@@ -82,9 +82,9 @@ jobs:
         run:
           |
           declare -a required_libs=(
-            "RadioLib@6.4.2"
-            "BresserWeatherSensorReceiver@0.23.0"
-            "ArduinoJson@7.0.3")
+            "RadioLib@7.1.1"
+            "BresserWeatherSensorReceiver@0.29.0"
+            "ArduinoJson@7.2.1")
           for i in "${required_libs[@]}"
           do
             arduino-cli lib install "$i"
