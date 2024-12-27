@@ -39,6 +39,7 @@
 // 20231113 Added JSON string input from serial console
 //          Added TRANSCEIVER_CHIP
 // 20231114 Added enum Encoders
+// 20241227 Added LilyGo T3 S3 SX1262/SX1276/LR1121
 //
 // ToDo:
 // -
