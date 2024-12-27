@@ -166,11 +166,11 @@ enum struct Encoders {
     #define PIN_RECEIVER_GPIO LORA_BUSY
     #define PIN_RECEIVER_RST  LORA_RST
 
-#elif defined(ARDUINO_heltec_wireless_stick)
+#elif defined(ARDUINO_HELTEC_WIRELESS_STICK)
     #pragma message("ARDUINO_heltec_wireless_stick defined; using on-board transceiver")
     #define USE_SX1276
 
-#elif defined(ARDUINO_heltec_wifi_lora_32_V2)
+#elif defined(ARDUINO_HELTEC_WIFI_LORA_32_V2)
     #pragma message("ARDUINO_heltec_wifi_lora_32_V2 defined; using on-board transceiver")
     #define USE_SX1276
 
@@ -192,7 +192,7 @@ enum struct Encoders {
     #define USE_SX1276
     #pragma message("Required wiring: A to RST, B to DIO1, D to DIO0, E to CS")
 
-#elif defined(ARDUINO_ESP32_DEV)
+#elif defined(ARDUINO_DFROBOT_FIREBEETLE_ESP32)
     //#define LORAWAN_NODE
     #define FIREBEETLE_ESP32_COVER_LORA
 
@@ -206,9 +206,10 @@ enum struct Encoders {
         #define USE_SX1276
 
     #else
-        #pragma message("ARDUINO_ESP32_DEV defined; select either LORAWAN_NODE or FIREBEETLE_ESP32_COVER_LORA manually!")
+        #pragma message("ARDUINO_DFROBOT_FIREBEETLE_ESP32 defined; select either LORAWAN_NODE or FIREBEETLE_ESP32_COVER_LORA manually!")
         
     #endif
+
 #endif
 
 
