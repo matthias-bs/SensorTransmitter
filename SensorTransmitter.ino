@@ -56,6 +56,7 @@
 // 20240209 Added CO2 and HCHO/VOC sensors
 // 20240210 Added missing CO2 and HCHO/VOC sensor encoding
 // 20241227 Added LilyGo T3 S3 SX1262/SX1276/LR1121
+// 20260130 Fixed radio module initialization for LilyGo T3S3 boards using RadioLib 7.5.0
 //
 // ToDo:
 // -
@@ -68,23 +69,18 @@
 #include "WeatherSensor.h"
 #include <ArduinoJson.h> // https://github.com/bblanchon/ArduinoJson
 
-#if defined(USE_CC1101)
-static CC1101 radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, RADIOLIB_NC, PIN_TRANSCEIVER_GPIO);
-#elif defined(USE_SX1276)
-// SX1276 has the following connections:
-// NSS pin:   PIN_TRANSCEIVER_CS
-// DIO0 pin:  PIN_TRANSCEIVER_IRQ
-// RESET pin: PIN_TRANSCEIVER_RST
-// DIO1 pin:  PIN_TRANSCEIVER_GPIO
-static SX1276 radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, PIN_TRANSCEIVER_RST, PIN_TRANSCEIVER_GPIO);
-#elif defined(USE_SX1262)
-static SX1262 radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, PIN_TRANSCEIVER_RST, PIN_TRANSCEIVER_GPIO);
-#elif defined(USE_LR1121)
-static LR1121 radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, PIN_TRANSCEIVER_RST, PIN_TRANSCEIVER_GPIO);
-#endif
-
 #if defined(ARDUINO_LILYGO_T3S3_SX1262) || defined(ARDUINO_LILYGO_T3S3_SX1276) || defined(ARDUINO_LILYGO_T3S3_LR1121)
-static SPIClass *spi = nullptr;
+  // Using custom SPI 
+  static SPIClass *spi = new SPIClass(SPI);
+  RADIO_CHIP radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, PIN_TRANSCEIVER_RST, PIN_TRANSCEIVER_GPIO, *spi);
+
+#else
+  #if defined(USE_CC1101)
+    static RADIO_CHIP radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, RADIOLIB_NC, PIN_TRANSCEIVER_GPIO);
+  #else
+    static RADIO_CHIP radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, PIN_TRANSCEIVER_RST, PIN_TRANSCEIVER_GPIO);
+  #endif
+
 #endif
 
 #if defined(ARDUINO_LILYGO_T3S3_LR1121)
@@ -110,11 +106,9 @@ void setup()
 {
   Serial.begin(115200);
 
-  #if defined(ARDUINO_LILYGO_T3S3_SX1262) || defined(ARDUINO_LILYGO_T3S3_SX1276) || defined(ARDUINO_LILYGO_T3S3_LR1121)
-  spi = new SPIClass(SPI);
+#if defined(ARDUINO_LILYGO_T3S3_SX1262) || defined(ARDUINO_LILYGO_T3S3_SX1276) || defined(ARDUINO_LILYGO_T3S3_LR1121)
   spi->begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
-  radio = new Module(PIN_RECEIVER_CS, PIN_RECEIVER_IRQ, PIN_RECEIVER_RST, PIN_RECEIVER_GPIO, *spi);
-  #endif
+#endif
 
 
 
