@@ -259,6 +259,16 @@ enum struct Encoders {
     #error "Either USE_CC1101, USE_SX1276, USE_SX1262 or USE_LR1121 must be defined!"
 #endif
 
+#if defined(USE_CC1101)
+    #define RADIO_CHIP CC1101
+#elif defined(USE_SX1276)
+    #define RADIO_CHIP SX1276
+#elif defined(USE_SX1262)
+    #define RADIO_CHIP SX1262
+#elif defined(USE_LR1121)
+    #define RADIO_CHIP LR1121
+#endif
+
 // Arduino default SPI pins
 //
 // Board   SCK   MOSI  MISO
