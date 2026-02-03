@@ -420,7 +420,7 @@ bool deSerialize(Encoders encoder, String json_str)
 uint8_t encodeBresser5In1Payload(uint8_t *msg)
 {
   uint8_t payload[26] = {0};
-  char buf[10];  // Increased buffer size to prevent overflow
+  char buf[10];  // Buffer for snprintf formats: %05.1f (8 bytes), %04.1f (6 bytes), %02d (3 bytes)
 
   payload[14] = (uint8_t)(ws.sensor[0].sensor_id & 0xFF);
   payload[15] = ((ws.sensor[0].startup ? 0 : 8) << 4) | ws.sensor[0].s_type;
@@ -563,7 +563,7 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
 uint8_t encodeBresser6In1Payload(uint8_t *msg)
 {
   static int msg_type = 0;
-  char buf[10];  // Increased buffer size to prevent overflow
+  char buf[10];  // Buffer for snprintf formats: %07.1f (10 bytes), %04.1f (6 bytes), %02d (3 bytes)
   uint8_t payload[18] = {0};
 
   payload[2] = ws.sensor[0].sensor_id >> 24;
@@ -725,7 +725,7 @@ First two bytes are an LFSR-16 digest, generator 0x8810 key 0xba95 with a final 
 */
 uint8_t encodeBresser7In1Payload(uint8_t *msg)
 {
-  char buf[10];  // Increased buffer size to prevent overflow
+  char buf[10];  // Buffer for snprintf formats: %07.1f (10 bytes), %06d (7 bytes), %04.1f (6 bytes), %04d (5 bytes)
   uint8_t payload[26] = {0};
 
   payload[2] = (ws.sensor[0].sensor_id >> 8) & 0xFF;
@@ -863,7 +863,7 @@ First two bytes are an LFSR-16 digest, generator 0x8810 key 0xabf9 with a final 
 uint8_t encodeBresserLightningPayload(uint8_t *msg)
 {
   uint8_t payload[10] = {0};
-  char buf[8];  // Increased buffer size for safety
+  char buf[8];  // Buffer for snprintf format: %04d (5 bytes including null terminator)
 
   payload[2] = (ws.sensor[0].sensor_id >> 8) & 0xFF;
   payload[3] = ws.sensor[0].sensor_id & 0xFF;
