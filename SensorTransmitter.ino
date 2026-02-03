@@ -368,6 +368,9 @@ bool deSerialize(Encoders encoder, String json_str)
     }
     else if (ws.sensor[0].s_type == SENSOR_TYPE_HCHO_VOC)
     {
+      // Ensure the voc structure is properly initialized
+      memset(&ws.sensor[0].voc, 0, sizeof(ws.sensor[0].voc));
+      
       ws.sensor[0].voc.hcho_ppb = doc["hcho_ppb"];
       ws.sensor[0].voc.voc_level = doc["voc"];
     }
