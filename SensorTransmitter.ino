@@ -429,7 +429,7 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
   payload[16] = wind & 0xFF;
   payload[17] = (wind >> 8) & 0xF;
 
-  uint8_t wdir = (uint8_t)(((int)(ws.sensor[0].w.wind_direction_deg) % 360) / 22.5f);
+  uint8_t wdir = (uint8_t)(((((int)(ws.sensor[0].w.wind_direction_deg) % 360) + 360) % 360) / 22.5f);
   payload[17] |= wdir << 4;
 
   snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_avg_meter_sec);
@@ -635,7 +635,8 @@ uint8_t encodeBresser6In1Payload(uint8_t *msg)
       if (ws.sensor[0].s_type == SENSOR_TYPE_SOIL)
       {
         int const moisture_map[] = {0, 7, 13, 20, 27, 33, 40, 47, 53, 60, 67, 73, 80, 87, 93, 99}; // scale is 20/3
-        payload[14] = 15; // Default to maximum if not found
+        const int MOISTURE_MAP_MAX_INDEX = 15;
+        payload[14] = MOISTURE_MAP_MAX_INDEX; // Default to maximum if moisture >= 99
         for (int i = 0; i < 16; i++)
         {
           if (moisture_map[i] > ws.sensor[0].soil.moisture)
