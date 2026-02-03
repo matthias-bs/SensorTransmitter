@@ -57,6 +57,7 @@
 // 20240210 Added missing CO2 and HCHO/VOC sensor encoding
 // 20241227 Added LilyGo T3 S3 SX1262/SX1276/LR1121
 // 20260130 Fixed radio module initialization for LilyGo T3S3 boards using RadioLib 7.5.0
+// 20260203 Fixed exception in JSON deserialization for Bresser 7in1 sensor with wrong s_type
 //
 // ToDo:
 // -
@@ -369,6 +370,11 @@ bool deSerialize(Encoders encoder, String json_str)
     {
       ws.sensor[0].voc.hcho_ppb = doc["hcho_ppb"];
       ws.sensor[0].voc.voc_level = doc["voc"];
+    }
+    else
+    {
+      log_e("Unsupported s_type: %d", ws.sensor[0].s_type);
+      return false;
     }
   }
   else if (encoder == Encoders::ENC_BRESSER_LIGHTNING)
