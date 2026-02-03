@@ -58,6 +58,8 @@
 // 20241227 Added LilyGo T3 S3 SX1262/SX1276/LR1121
 // 20260130 Fixed radio module initialization for LilyGo T3S3 boards using RadioLib 7.5.0
 // 20260203 Fixed exception in JSON deserialization for Bresser 7in1 sensor with wrong s_type
+//          Fixed Water Leakage Sensor encoder
+//          Fixed HCHO encoding
 //
 // ToDo:
 // -
@@ -1032,7 +1034,6 @@ void loop()
       {
         encoder = Encoders::ENC_BRESSER_LEAKAGE;
         log_i("Encoder: Bresser Leakage");
-        log_w("This encoder can currently only send raw data!");
       }
       else
       {
