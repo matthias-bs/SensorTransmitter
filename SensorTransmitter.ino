@@ -967,11 +967,11 @@ uint8_t encodeBresserLeakagePayload(uint8_t *msg)
 
   if (ws.sensor[0].leak.alarm)
   {
-    payload[7] |= 8;
+    payload[7] |= 0x80;
   }
   else
   {
-    payload[7] |= 4;
+    payload[7] |= 0x40;
   }
 
   uint16_t crc = crc16(&payload[2], 5, 0x1021, 0x0000);
