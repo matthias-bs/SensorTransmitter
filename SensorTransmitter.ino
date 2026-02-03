@@ -429,7 +429,7 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
   payload[16] = wind & 0xFF;
   payload[17] = (wind >> 8) & 0xF;
 
-  uint8_t wdir = ws.sensor[0].w.wind_direction_deg / 22.5f;
+  uint8_t wdir = (uint8_t)(((int)(ws.sensor[0].w.wind_direction_deg) % 360) / 22.5f);
   payload[17] |= wdir << 4;
 
   snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_avg_meter_sec);
@@ -562,7 +562,7 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
 // - 18b0 0887 18 : npkap
 uint8_t encodeBresser6In1Payload(uint8_t *msg)
 {
-  static int msg_type;
+  static int msg_type = 0;
   char buf[8];
   uint8_t payload[18] = {0};
 
@@ -635,6 +635,7 @@ uint8_t encodeBresser6In1Payload(uint8_t *msg)
       if (ws.sensor[0].s_type == SENSOR_TYPE_SOIL)
       {
         int const moisture_map[] = {0, 7, 13, 20, 27, 33, 40, 47, 53, 60, 67, 73, 80, 87, 93, 99}; // scale is 20/3
+        payload[14] = 15; // Default to maximum if not found
         for (int i = 0; i < 16; i++)
         {
           if (moisture_map[i] > ws.sensor[0].soil.moisture)
@@ -1007,7 +1008,8 @@ void loop()
   }
   else if (input_str.startsWith("enc"))
   {
-    if (int pos = input_str.indexOf('='))
+    int pos = input_str.indexOf('=');
+    if (pos != -1)
     {
       input_str.toLowerCase();
       if (input_str.substring(pos + 1).startsWith("bresser-5in1"))
@@ -1043,7 +1045,8 @@ void loop()
   } // "enc[oder]"
   else if (input_str.startsWith("int"))
   {
-    if (int pos = input_str.indexOf('='))
+    int pos = input_str.indexOf('=');
+    if (pos != -1)
     {
       int val = input_str.substring(pos + 1).toInt();
       if (val > 10)
