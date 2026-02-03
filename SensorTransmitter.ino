@@ -765,6 +765,10 @@ uint8_t encodeBresser7In1Payload(uint8_t *msg)
     snprintf(buf, 7, "%04.1f", temp_c);
     payload[14] = ((buf[0] - '0') << 4) | (buf[1] - '0');
     payload[15] |= ((buf[3] - '0') << 4);
+    if (ws.sensor[0].w.temp_c < 0)
+    {
+      payload[15] ^= 0x08; // Set negative temperature flag
+    }
 
     snprintf(buf, 7, "%02d", ws.sensor[0].w.humidity);
     payload[16] = ((buf[0] - '0') << 4) | (buf[1] - '0');
