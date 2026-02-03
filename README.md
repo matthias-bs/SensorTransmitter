@@ -21,7 +21,7 @@ This project is closely related to [BresserWeatherSensorReceiver](https://github
 - [x] Bresser 6-in-1
 - [x] Bresser 7-in-1
 - [x] Bresser Lightning
-- [ ] Bresser Leakage
+- [x] Bresser Leakage
 
 ## Sensor Data Provisioning Options
 
