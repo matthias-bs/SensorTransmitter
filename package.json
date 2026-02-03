@@ -23,7 +23,7 @@
   "homepage": "https://github.com/matthias-bs/SensorTransmitter#README",
   "dependencies": {
     "RadioLib": "jgromes/RadioLib#semver:^7.5.0",
-    "BresserWeatherSensorReceiver": "matthias-bs/BresserWeatherSensorReceiver#semver:^0.38.2",
+    "BresserWeatherSensorReceiver": "matthias-bs/BresserWeatherSensorReceiver#semver:^0.38.3",
     "ArduinoJson": "bblanchon/ArduinoJson#semver:^7.4.2"   
   }
 }
