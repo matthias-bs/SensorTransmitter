@@ -1,0 +1,19 @@
+# CodeQL artifacts
+_codeql_detected_source_root
+
+# Build artifacts
+*.o
+*.elf
+*.hex
+*.bin
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -803,14 +803,14 @@ uint8_t encodeBresser7In1Payload(uint8_t *msg)
     snprintf(buf, 8, "%04u", ws.sensor[0].co2.co2_ppm);
     log_d("CO2: %04u", ws.sensor[0].co2.co2_ppm);
     payload[4] = ((buf[0] - '0') << 4) | (buf[1] - '0');
-    payload[4] = ((buf[2] - '0') << 4) | (buf[3] - '0');
+    payload[5] = ((buf[2] - '0') << 4) | (buf[3] - '0');
   }
   else if (ws.sensor[0].s_type == SENSOR_TYPE_HCHO_VOC)
   {
     snprintf(buf, 8, "%04u", ws.sensor[0].voc.hcho_ppb);
     log_d("HCHO: %04u", ws.sensor[0].voc.hcho_ppb);
     payload[4] = ((buf[0] - '0') << 4) | (buf[1] - '0');
-    payload[4] = ((buf[2] - '0') << 4) | (buf[3] - '0');
+    payload[5] = ((buf[2] - '0') << 4) | (buf[3] - '0');
     log_d("VOC: %u", ws.sensor[0].voc.voc_level);
     payload[22] = ws.sensor[0].voc.voc_level;
   }

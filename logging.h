@@ -77,7 +77,7 @@
     #define CORE_DEBUG_LEVEL ARDUHAL_LOG_LEVEL_INFO
 
     #if defined(DEBUG_PORT) && CORE_DEBUG_LEVEL > ARDUHAL_LOG_LEVEL_NONE
-        #define log_e(...) { DEBUG_PORT.printf("%s(), l.%d: ", __func__, __LINE__); DEBUG_PORT.println(); }
+        #define log_e(...) { DEBUG_PORT.printf("%s(), l.%d: ", __func__, __LINE__); DEBUG_PORT.printf(__VA_ARGS__); DEBUG_PORT.println(); }
      #else
         #define log_e(...) {}
      #endif
