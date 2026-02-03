@@ -655,7 +655,7 @@ uint8_t encodeBresser6In1Payload(uint8_t *msg)
       log_d("Rain: %07.1f", ws.sensor[0].w.rain_mm);
       payload[12] = ((buf[0] - '0') << 4) | (buf[1] - '0');
       payload[13] = ((buf[2] - '0') << 4) | (buf[3] - '0');
-      payload[14] = ((buf[4] - '0') << 4) | (buf[5] - '0');
+      payload[14] = ((buf[4] - '0') << 4) | (buf[6] - '0');
       payload[12] ^= 0xFF;
       payload[13] ^= 0xFF;
       payload[14] ^= 0xFF;
@@ -754,7 +754,7 @@ uint8_t encodeBresser7In1Payload(uint8_t *msg)
     log_d("Rain: %07.1f", ws.sensor[0].w.rain_mm);
     payload[10] = ((buf[0] - '0') << 4) | (buf[1] - '0');
     payload[11] = ((buf[2] - '0') << 4) | (buf[3] - '0');
-    payload[12] = ((buf[4] - '0') << 4) | (buf[5] - '0');
+    payload[12] = ((buf[4] - '0') << 4) | (buf[6] - '0');
 
     float temp_c = ws.sensor[0].w.temp_c;
     log_d("Temp: %04.1f", temp_c);
