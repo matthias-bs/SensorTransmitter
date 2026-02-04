@@ -955,14 +955,20 @@ uint8_t encodeBresserLightningPayload(uint8_t *msg)
  */
 uint8_t encodeBresserLeakagePayload(uint8_t *msg)
 {
+  if (msg == NULL) {
+    log_e("Invalid msg pointer");
+    return 0;
+  }
+  
   uint8_t payload[10] = {0x00};
 
-  payload[2] = ws.sensor[0].sensor_id >> 24;
+  payload[2] = (ws.sensor[0].sensor_id >> 24) & 0xFF;
   payload[3] = (ws.sensor[0].sensor_id >> 16) & 0xFF;
   payload[4] = (ws.sensor[0].sensor_id >> 8) & 0xFF;
-  payload[5] = (ws.sensor[0].sensor_id) & 0xFF;
-  payload[6] = ws.sensor[0].s_type << 4;
-  payload[6] |= (ws.sensor[0].startup ? 0 : 8) | ws.sensor[0].chan;
+  payload[5] = ws.sensor[0].sensor_id & 0xFF;
+  payload[6] = (ws.sensor[0].s_type << 4) & 0xF0;
+  payload[6] |= (ws.sensor[0].startup ? 0 : 8) | (ws.sensor[0].chan & 0x07);
+  
   if (ws.sensor[0].battery_ok) {
     payload[7] = 0x30;
   } else {
@@ -981,7 +987,7 @@ uint8_t encodeBresserLeakagePayload(uint8_t *msg)
   uint16_t crc = crc16(&payload[2], 5, 0x1021, 0x0000);
   log_d("CRC: 0x%04X", crc);
 
-  payload[0] = crc >> 8;
+  payload[0] = (crc >> 8) & 0xFF;
   payload[1] = crc & 0xFF;
 
   memcpy(msg, payload, 10);
