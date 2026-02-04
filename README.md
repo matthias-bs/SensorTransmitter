@@ -92,13 +92,13 @@ Select option in [SensorTransmitter.h](SensorTransmitter.h).
 #### Bresser Lightning Sensor
 
    ```
-   {"sensor_id": 65535, "s_type": 9, "chan": 1, "startup": 0, "battery_ok": 1, "strike_count": 11, "distance_km": 7}
+   {"sensor_id": 65535, "s_type": 9, "chan": 0, "startup": 0, "battery_ok": 1, "strike_count": 11, "distance_km": 7}
    ```
 
 #### Bresser Leakage Sensor
 
    ```
-   {"sensor_id":4294967295, "s_type": 5, "chan": 0, "startup": 0, "battery_ok": 1, "alarm": 1}
+   {"sensor_id":4294967295, "s_type": 5, "chan": 1, "startup": 0, "battery_ok": 1, "alarm": 1}
    ```
 
 ## Serial Port Control
