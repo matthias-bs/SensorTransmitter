@@ -74,8 +74,8 @@
 
 #if defined(ARDUINO_LILYGO_T3S3_SX1262) || defined(ARDUINO_LILYGO_T3S3_SX1276) || defined(ARDUINO_LILYGO_T3S3_LR1121)
   // Using custom SPI 
-  static SPIClass *spi = new SPIClass(SPI);
-  RADIO_CHIP radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, PIN_TRANSCEIVER_RST, PIN_TRANSCEIVER_GPIO, *spi);
+  static SPIClass spi(SPI);
+  RADIO_CHIP radio = new Module(PIN_TRANSCEIVER_CS, PIN_TRANSCEIVER_IRQ, PIN_TRANSCEIVER_RST, PIN_TRANSCEIVER_GPIO, spi);
 
 #else
   #if defined(USE_CC1101)
@@ -110,7 +110,7 @@ void setup()
   Serial.begin(115200);
 
 #if defined(ARDUINO_LILYGO_T3S3_SX1262) || defined(ARDUINO_LILYGO_T3S3_SX1276) || defined(ARDUINO_LILYGO_T3S3_LR1121)
-  spi->begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
+  spi.begin(LORA_SCK, LORA_MISO, LORA_MOSI, LORA_CS);
 #endif
 
 
