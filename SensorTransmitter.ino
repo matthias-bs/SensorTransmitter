@@ -60,6 +60,7 @@
 // 20260203 Fixed exception in JSON deserialization for Bresser 7in1 sensor with wrong s_type
 //          Fixed Water Leakage Sensor encoder
 //          Fixed HCHO encoding
+// 20260204 Fixed exception in deSerialize()
 //
 // ToDo:
 // -
@@ -104,6 +105,9 @@ static const Module::RfSwitchMode_t rfswitch_table[] = {
     END_OF_MODE_TABLE,
 };
 #endif
+
+// Weather sensor object; used for message generation
+WeatherSensor ws;
 
 void setup()
 {
@@ -153,12 +157,10 @@ void setup()
   // LR1121 TCXO Voltage 2.85~3.15V
   radio.setTCXO(3.0);
 #endif
+
+  // Set weather sensor array size to 1
+  ws.sensor.resize(1);
 }
-
-// counter to keep track of transmitted packets
-int count = 0;
-
-WeatherSensor ws;
 
 int msgBegin(uint8_t *msg)
 {
@@ -299,12 +301,12 @@ void genJson(Encoders encoder, String &json_str)
 #endif
 
 #if defined(DATA_JSON_INPUT) || defined(DATA_JSON_CONST)
-bool deSerialize(Encoders encoder, String json_str)
+bool deSerialize(Encoders encoder, const String& json_str)
 {
   JsonDocument doc;
 
   // Deserialize the JSON document
-  DeserializationError error = deserializeJson(doc, json_str.c_str());
+  DeserializationError error = deserializeJson(doc, json_str);
 
   // Test if parsing succeeded
   if (error)
@@ -315,9 +317,9 @@ bool deSerialize(Encoders encoder, String json_str)
 
   ws.sensor[0].sensor_id = doc["sensor_id"];
   ws.sensor[0].s_type = doc["s_type"];
-  ws.sensor[0].chan = doc["chan"];
-  ws.sensor[0].startup = doc["startup"];
-  ws.sensor[0].battery_ok = doc["battery_ok"];
+  ws.sensor[0].chan = doc["chan"] | 0;
+  ws.sensor[0].startup = doc["startup"] | 0;
+  ws.sensor[0].battery_ok = doc["battery_ok"] | 1;
 
   if (encoder == Encoders::ENC_BRESSER_5IN1)
   {
