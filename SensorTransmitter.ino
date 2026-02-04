@@ -420,7 +420,7 @@ bool deSerialize(Encoders encoder, String json_str)
 uint8_t encodeBresser5In1Payload(uint8_t *msg)
 {
   uint8_t payload[26] = {0};
-  char buf[10];  // Buffer for snprintf formats: %05.1f (8 bytes), %04.1f (6 bytes), %02d (3 bytes)
+  char buf[10];  // Buffer for snprintf: %05.1f needs 7+null=8 bytes ("12345.6"), %04.1f=6, %02d=3
 
   payload[14] = (uint8_t)(ws.sensor[0].sensor_id & 0xFF);
   payload[15] = ((ws.sensor[0].startup ? 0 : 8) << 4) | ws.sensor[0].s_type;
@@ -429,10 +429,10 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
   payload[16] = wind & 0xFF;
   payload[17] = (wind >> 8) & 0xF;
 
-  uint8_t wdir = (uint8_t)(((((int)(ws.sensor[0].w.wind_direction_deg) % 360) + 360) % 360) / 22.5f);
+  uint8_t wdir = (uint8_t)((int)(ws.sensor[0].w.wind_direction_deg) / 22.5f);
   payload[17] |= wdir << 4;
 
-  snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_avg_meter_sec);
+  snprintf(buf, 10, "%04.1f", ws.sensor[0].w.wind_avg_meter_sec);
   payload[18] = ((buf[1] - '0') << 4) | (buf[3] - '0');
   payload[19] = buf[0] - '0';
 
@@ -447,14 +447,14 @@ uint8_t encodeBresser5In1Payload(uint8_t *msg)
     payload[25] = 0;
   }
 
-  snprintf(buf, 7, "%04.1f", temp_c);
+  snprintf(buf, 10, "%04.1f", temp_c);
   payload[20] = ((buf[1] - '0') << 4) | (buf[3] - '0');
   payload[21] = buf[0] - '0';
 
-  snprintf(buf, 7, "%02d", ws.sensor[0].w.humidity);
+  snprintf(buf, 10, "%02d", ws.sensor[0].w.humidity);
   payload[22] = ((buf[0] - '0') << 4) | (buf[1] - '0');
 
-  snprintf(buf, 7, "%05.1f", ws.sensor[0].w.rain_mm);
+  snprintf(buf, 10, "%05.1f", ws.sensor[0].w.rain_mm);
   payload[23] = ((buf[2] - '0') << 4) | (buf[4] - '0');
   payload[24] = ((buf[0] - '0') << 4) | (buf[1] - '0');
 
@@ -573,12 +573,12 @@ uint8_t encodeBresser6In1Payload(uint8_t *msg)
   payload[6] = ws.sensor[0].s_type << 4;
   payload[6] |= (ws.sensor[0].startup ? 0 : 8) | ws.sensor[0].chan;
 
-  snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_gust_meter_sec);
+  snprintf(buf, 10, "%04.1f", ws.sensor[0].w.wind_gust_meter_sec);
   log_d("Wind gust: %04.1f", ws.sensor[0].w.wind_gust_meter_sec);
   payload[7] = ((buf[0] - '0') << 4) | (buf[1] - '0');
   payload[8] = (buf[3] - '0') << 4;
 
-  snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_avg_meter_sec);
+  snprintf(buf, 10, "%04.1f", ws.sensor[0].w.wind_avg_meter_sec);
   log_d("Wind avg: %04.1f", ws.sensor[0].w.wind_avg_meter_sec);
   payload[9] = ((buf[0] - '0') << 4) | (buf[1] - '0');
   payload[8] |= buf[3] - '0';
@@ -588,7 +588,7 @@ uint8_t encodeBresser6In1Payload(uint8_t *msg)
   payload[8] ^= 0xFF;
   payload[9] ^= 0xFF;
 
-  snprintf(buf, 7, "%03d", (int)ws.sensor[0].w.wind_direction_deg);
+  snprintf(buf, 10, "%03d", (int)ws.sensor[0].w.wind_direction_deg);
   log_d("Wind dir: %03d", (int)ws.sensor[0].w.wind_direction_deg);
   payload[10] = ((buf[0] - '0') << 4) | (buf[1] - '0');
   payload[11] = (buf[2] - '0') << 4;
@@ -620,7 +620,7 @@ uint8_t encodeBresser6In1Payload(uint8_t *msg)
         payload[13] = 0;
       }
 
-      snprintf(buf, 7, "%04.1f", temp_c);
+      snprintf(buf, 10, "%04.1f", temp_c);
       payload[12] = ((buf[0] - '0') << 4) | (buf[1] - '0');
       payload[13] |= ((buf[3] - '0') << 4) | (ws.sensor[0].battery_ok ? 2 : 0);
       payload[16] = 0; // Flags: temp_ok
@@ -628,7 +628,7 @@ uint8_t encodeBresser6In1Payload(uint8_t *msg)
       if ((ws.sensor[0].s_type == SENSOR_TYPE_WEATHER1) ||
           (ws.sensor[0].s_type == SENSOR_TYPE_THERMO_HYGRO))
       {
-        snprintf(buf, 7, "%02d", ws.sensor[0].w.humidity);
+        snprintf(buf, 10, "%02d", ws.sensor[0].w.humidity);
         payload[14] = ((buf[0] - '0') << 4) | (buf[1] - '0');
       }
 
@@ -655,7 +655,7 @@ uint8_t encodeBresser6In1Payload(uint8_t *msg)
     } // msg_type == 0
     else
     {
-      snprintf(buf, 8, "%07.1f", ws.sensor[0].w.rain_mm);
+      snprintf(buf, 10, "%07.1f", ws.sensor[0].w.rain_mm);
       log_d("Rain: %07.1f", ws.sensor[0].w.rain_mm);
       payload[12] = ((buf[0] - '0') << 4) | (buf[1] - '0');
       payload[13] = ((buf[2] - '0') << 4) | (buf[3] - '0');
@@ -668,7 +668,7 @@ uint8_t encodeBresser6In1Payload(uint8_t *msg)
     }
   }
 
-  snprintf(buf, 8, "%04.1f", ws.sensor[0].w.uv);
+  snprintf(buf, 10, "%04.1f", ws.sensor[0].w.uv);
   log_d("UV: %04.1f", ws.sensor[0].w.uv);
   payload[15] = ((buf[0] - '0') << 4) | (buf[1] - '0');
   payload[16] |= ((buf[3] - '0') << 4);
@@ -737,24 +737,24 @@ uint8_t encodeBresser7In1Payload(uint8_t *msg)
 
   if (ws.sensor[0].s_type == SENSOR_TYPE_WEATHER1)
   {
-    snprintf(buf, 7, "%03d", (int)ws.sensor[0].w.wind_direction_deg);
+    snprintf(buf, 10, "%03d", (int)ws.sensor[0].w.wind_direction_deg);
     log_d("Wind dir: %03d", (int)ws.sensor[0].w.wind_direction_deg);
     payload[4] = ((buf[0] - '0') << 4) | (buf[1] - '0');
     payload[5] = (buf[2] - '0') << 4;
 
     // payload[6] |= (ws.sensor[0].startup ? 0 : 8) | ws.sensor[0].chan;
 
-    snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_gust_meter_sec);
+    snprintf(buf, 10, "%04.1f", ws.sensor[0].w.wind_gust_meter_sec);
     log_d("Wind gust: %04.1f", ws.sensor[0].w.wind_gust_meter_sec);
     payload[7] = ((buf[0] - '0') << 4) | (buf[1] - '0');
     payload[8] = (buf[3] - '0') << 4;
 
-    snprintf(buf, 7, "%04.1f", ws.sensor[0].w.wind_avg_meter_sec);
+    snprintf(buf, 10, "%04.1f", ws.sensor[0].w.wind_avg_meter_sec);
     log_d("Wind avg: %04.1f", ws.sensor[0].w.wind_avg_meter_sec);
     payload[9] = ((buf[1] - '0') << 4) | (buf[3] - '0');
     payload[8] |= buf[0] - '0';
 
-    snprintf(buf, 8, "%07.1f", ws.sensor[0].w.rain_mm);
+    snprintf(buf, 10, "%07.1f", ws.sensor[0].w.rain_mm);
     log_d("Rain: %07.1f", ws.sensor[0].w.rain_mm);
     payload[10] = ((buf[0] - '0') << 4) | (buf[1] - '0');
     payload[11] = ((buf[2] - '0') << 4) | (buf[3] - '0');
@@ -766,7 +766,7 @@ uint8_t encodeBresser7In1Payload(uint8_t *msg)
     {
       temp_c += 100;
     }
-    snprintf(buf, 7, "%04.1f", temp_c);
+    snprintf(buf, 10, "%04.1f", temp_c);
     payload[14] = ((buf[0] - '0') << 4) | (buf[1] - '0');
     payload[15] |= ((buf[3] - '0') << 4);
     if (ws.sensor[0].w.temp_c < 0)
@@ -774,15 +774,15 @@ uint8_t encodeBresser7In1Payload(uint8_t *msg)
       payload[15] ^= 0x08; // Set negative temperature flag
     }
 
-    snprintf(buf, 7, "%02d", ws.sensor[0].w.humidity);
+    snprintf(buf, 10, "%02d", ws.sensor[0].w.humidity);
     payload[16] = ((buf[0] - '0') << 4) | (buf[1] - '0');
 
-    snprintf(buf, 8, "%04.1f", ws.sensor[0].w.uv);
+    snprintf(buf, 10, "%04.1f", ws.sensor[0].w.uv);
     log_d("UV: %04.1f", ws.sensor[0].w.uv);
     payload[20] = ((buf[0] - '0') << 4) | (buf[1] - '0');
     payload[21] |= ((buf[3] - '0') << 4);
 
-    snprintf(buf, 8, "%06d", (int)(ws.sensor[0].w.light_klx * 1000));
+    snprintf(buf, 10, "%06d", (int)(ws.sensor[0].w.light_klx * 1000));
     log_d("Light: %06d", (int)(ws.sensor[0].w.light_klx * 1000));
     payload[17] = ((buf[0] - '0') << 4) | (buf[1] - '0');
     payload[18] = ((buf[2] - '0') << 4) | (buf[3] - '0');
@@ -790,13 +790,13 @@ uint8_t encodeBresser7In1Payload(uint8_t *msg)
   }
   else if (ws.sensor[0].s_type == SENSOR_TYPE_AIR_PM)
   {
-    snprintf(buf, 8, "%04d", ws.sensor[0].pm.pm_2_5);
+    snprintf(buf, 10, "%04d", ws.sensor[0].pm.pm_2_5);
     log_d("PM2.5: %04d", ws.sensor[0].pm.pm_2_5);
     payload[10] = (buf[0] - '0');
     payload[11] = ((buf[1] - '0') << 4) | (buf[2] - '0');
     payload[12] = ((buf[3] - '0') << 4);
 
-    snprintf(buf, 8, "%04d", ws.sensor[0].pm.pm_10);
+    snprintf(buf, 10, "%04d", ws.sensor[0].pm.pm_10);
     log_d("PM10: %04d", ws.sensor[0].pm.pm_10);
     payload[12] = (buf[0] - '0');
     payload[13] = ((buf[1] - '0') << 4) | (buf[2] - '0');
@@ -804,14 +804,14 @@ uint8_t encodeBresser7In1Payload(uint8_t *msg)
   }
   else if (ws.sensor[0].s_type == SENSOR_TYPE_CO2)
   {
-    snprintf(buf, 8, "%04u", ws.sensor[0].co2.co2_ppm);
+    snprintf(buf, 10, "%04u", ws.sensor[0].co2.co2_ppm);
     log_d("CO2: %04u", ws.sensor[0].co2.co2_ppm);
     payload[4] = ((buf[0] - '0') << 4) | (buf[1] - '0');
     payload[5] = ((buf[2] - '0') << 4) | (buf[3] - '0');
   }
   else if (ws.sensor[0].s_type == SENSOR_TYPE_HCHO_VOC)
   {
-    snprintf(buf, 8, "%04u", ws.sensor[0].voc.hcho_ppb);
+    snprintf(buf, 10, "%04u", ws.sensor[0].voc.hcho_ppb);
     log_d("HCHO: %04u", ws.sensor[0].voc.hcho_ppb);
     payload[4] = ((buf[0] - '0') << 4) | (buf[1] - '0');
     payload[5] = ((buf[2] - '0') << 4) | (buf[3] - '0');
@@ -863,13 +863,13 @@ First two bytes are an LFSR-16 digest, generator 0x8810 key 0xabf9 with a final 
 uint8_t encodeBresserLightningPayload(uint8_t *msg)
 {
   uint8_t payload[10] = {0};
-  char buf[8];  // Buffer for snprintf format: %04d (5 bytes including null terminator)
+  char buf[8];  // Buffer for snprintf format: %04d needs 4+null=5 bytes ("1234")
 
   payload[2] = (ws.sensor[0].sensor_id >> 8) & 0xFF;
   payload[3] = ws.sensor[0].sensor_id & 0xFF;
 
   // Counter encoded as BCD with most significant digit counting up to 15!
-  snprintf(buf, 6, "%04d", ws.sensor[0].lgt.strike_count);
+  snprintf(buf, 8, "%04d", ws.sensor[0].lgt.strike_count);
   log_d("count: %04d", ws.sensor[0].lgt.strike_count);
   payload[4] = ((ws.sensor[0].lgt.strike_count / 100) << 4) | (buf[2] - '0');
   payload[5] = (buf[3] - '0') << 4;
