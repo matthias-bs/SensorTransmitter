@@ -420,7 +420,7 @@ bool deSerialize(Encoders encoder, String json_str)
 uint8_t encodeBresser5In1Payload(uint8_t *msg)
 {
   uint8_t payload[26] = {0};
-  char buf[10];  // Buffer for snprintf: %05.1f needs 7+null=8 bytes ("12345.6"), %04.1f=6, %02d=3
+  char buf[10];  // Buffer for snprintf formats: %05.1f (8 bytes), %04.1f (7 bytes), %02d (3 bytes)
 
   payload[14] = (uint8_t)(ws.sensor[0].sensor_id & 0xFF);
   payload[15] = ((ws.sensor[0].startup ? 0 : 8) << 4) | ws.sensor[0].s_type;
