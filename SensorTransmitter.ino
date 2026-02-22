@@ -2,7 +2,7 @@
 // SensorTransmitter.ino
 //
 // Bresser 5-in-1/6-in-1/7-in-1 868 MHz Sensor Radio Transmitter
-// based on CC1101 or SX1276/RFM95W and ESP32/ESP8266
+// based on CC1101, SX1276/RFM95W, SX1262 or LR1121 and ESP32/ESP8266
 //
 // This can be used to emulate sensors for testing purposes or to implement sensors currently not
 // available. In the the latter, emulate a sensor supported by the base station, but send
@@ -11,7 +11,7 @@
 //
 // https://github.com/matthias-bs/SensorTransmitter
 //
-// created: 11/2023
+// created: 11/2026
 //
 //
 // MIT License
