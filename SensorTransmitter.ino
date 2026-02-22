@@ -16,7 +16,7 @@
 //
 // MIT License
 //
-// Copyright (c) 2023 Matthias Prinke
+// Copyright (c) 2026 Matthias Prinke
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -61,6 +61,7 @@
 //          Fixed Water Leakage Sensor encoder
 //          Fixed HCHO encoding
 // 20260204 Fixed exception in deSerialize()
+// 20260222 Removed getDataRate() call, because this method has been removed in RadioLib 7.6.0
 //
 // ToDo:
 // -
@@ -1138,11 +1139,6 @@ void loop()
   {
     // the packet was successfully transmitted
     log_i(" success!");
-
-#if defined(USE_SX1276)
-    // print measured data rate
-    log_i("%s Datarate:\t%f bps", TRANSCEIVER_CHIP, radio.getDataRate());
-#endif
   }
   else if (state == RADIOLIB_ERR_PACKET_TOO_LONG)
   {
