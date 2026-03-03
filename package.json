@@ -24,6 +24,6 @@
   "dependencies": {
     "RadioLib": "jgromes/RadioLib#semver:^7.6.0",
     "BresserWeatherSensorReceiver": "matthias-bs/BresserWeatherSensorReceiver#semver:^0.39.0",
-    "ArduinoJson": "bblanchon/ArduinoJson#semver:^7.4.2"   
+    "ArduinoJson": "bblanchon/ArduinoJson#semver:^7.4.3"   
   }
 }
