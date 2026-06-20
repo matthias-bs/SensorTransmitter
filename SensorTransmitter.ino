@@ -62,6 +62,7 @@
 //          Fixed HCHO encoding
 // 20260204 Fixed exception in deSerialize()
 // 20260222 Removed getDataRate() call, because this method has been removed in RadioLib 7.6.0
+// 20260620 Changed radio initialization to new ConfigFSK_t structure in RadioLib 7.7.x
 //
 // ToDo:
 // -
