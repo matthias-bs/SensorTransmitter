@@ -125,7 +125,7 @@ void setup()
   log_i("%s Initializing ... ", TRANSCEIVER_CHIP);
 
   ConfigFSK_t config;
-  config.frequency = frequency;          // MHz
+  config.frequency = 868.3;              // MHz
   config.bitRate = 8.21;                 // kBaud
   config.frequencyDeviation = 57.136417; // kHz
   config.power = TX_POWER;               // dBm
