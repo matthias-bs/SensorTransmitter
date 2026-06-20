@@ -1,6 +1,6 @@
 {
   "name": "SensorTransmitter",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Sensor Data FSK Transmitter based on RadioLib using SX1276, CC1101, SX1262 or LR1121",
   "main": "SensorTransmitter.ino",
   "frameworks": "arduino",
