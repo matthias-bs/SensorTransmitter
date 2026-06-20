@@ -122,24 +122,32 @@ void setup()
 
   // initialize radio
   log_i("%s Initializing ... ", TRANSCEIVER_CHIP);
-  // carrier frequency:                   868.3 MHz
-  // bit rate:                            8.22 kbps
-  // frequency deviation:                 57.136417 kHz
-  // Rx bandwidth:                        270.0 kHz (CC1101) / 250 kHz (SX1276)
-  // output power:                        10 dBm
-  // preamble length:                     40 bits
-  // Preamble: AA AA AA AA AA
-  // Sync: 2D D4
-#ifdef USE_CC1101
-  int state = radio.begin(868.3, 8.21, 57.136417, 270, 10, 32);
+
+  ConfigFSK_t config;
+  config.frequency = frequency;          // MHz
+  config.bitRate = 8.21;                 // kBaud
+  config.frequencyDeviation = 57.136417; // kHz
+  config.power = TX_POWER;               // dBm
+  config.preambleLength = 32;            // bits
+
+  // RX bandwidth in kHz, radio chip specific (see RadioLib documentation for details)
+#if defined(USE_CC1101)
+  config.receiverBandwidth = 270;
 #elif defined(USE_SX1276)
-  int state = radio.beginFSK(868.3, 8.21, 57.136417, 250, 10, 32);
-#elif defined(USE_SX1262)
-    int state = radio.beginFSK(868.3, 8.21, 57.136417, 234.3, 10, 32);
+  config.receiverBandwidth = 250;
 #else
-    // defined(USE_LR1121)
-    int state = radio.beginGFSK(868.3, 8.21, 57.136417, 234.3, 10, 32);
+  // USE_SX1262 / USE_LR1121
+  config.receiverBandwidth = 234.3;
 #endif
+
+#if defined(USE_CC1101)
+  int state = radio.begin(config);
+#elif defined(USE_LR1121)
+  int state = radio.beginGFSK(config);
+#else
+  int state = radio.beginFSK(config);
+#endif
+
   if (state == RADIOLIB_ERR_NONE)
   {
     log_i("success!");

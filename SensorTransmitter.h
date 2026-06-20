@@ -61,6 +61,7 @@
 #define DATA_JSON_INPUT             //!< payload from JSON serial console input
 
 #define TX_INTERVAL 30              //!< transmit interval in seconds
+#define TX_POWER 10                 //!< transmit power in dBm (valid values depend on the radio module)
 
 enum struct Encoders {
     ENC_BRESSER_5IN1,

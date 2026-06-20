@@ -83,8 +83,8 @@ jobs:
         run:
           |
           declare -a required_libs=(
-            "RadioLib@7.6.0"
-            "BresserWeatherSensorReceiver@0.39.0"
+            "RadioLib@7.7.1"
+            "BresserWeatherSensorReceiver@0.41.1"
             "ArduinoJson@7.4.3")
           for i in "${required_libs[@]}"
           do
