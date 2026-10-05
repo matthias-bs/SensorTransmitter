@@ -742,7 +742,7 @@ uint8_t encodeBresser7In1Payload(uint8_t *msg)
 
   payload[2] = (ws.sensor[0].sensor_id >> 8) & 0xFF;
   payload[3] = (ws.sensor[0].sensor_id) & 0xFF;
-  payload[15] = (ws.sensor[0].battery_ok ? 0 : 4) ^ 0xAA;
+  payload[15] = (ws.sensor[0].battery_ok ? 0 : 0x06);
   payload[6] = ws.sensor[0].s_type << 4;
   payload[6] |= (!ws.sensor[0].startup) << 3 | ws.sensor[0].chan;
   payload[6] ^= 0xAA;
