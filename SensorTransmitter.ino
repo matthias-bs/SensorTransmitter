@@ -77,7 +77,7 @@
 #if !defined(DATA_RAW)
   #include "WeatherSensor.h"
 #endif
-#if defined(DATA_JSON_RAW) || defined(DATA_JSON_INPUT)
+#if defined(DATA_JSON_CONST) || defined(DATA_JSON_INPUT)
 #include <ArduinoJson.h> // https://github.com/bblanchon/ArduinoJson
 #endif
 
