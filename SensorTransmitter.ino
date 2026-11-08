@@ -63,6 +63,7 @@
 // 20260204 Fixed exception in deSerialize()
 // 20260222 Removed getDataRate() call, because this method has been removed in RadioLib 7.6.0
 // 20260620 Changed radio initialization to new ConfigFSK_t structure in RadioLib 7.7.x
+// 20261108 Updated to RadioLib 8.0.0
 //
 // ToDo:
 // -
@@ -70,10 +71,15 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "SensorTransmitter.h"
+//#include "RadioLib_config_override.h"
 #include <RadioLib.h>
 #include "logging.h"
-#include "WeatherSensor.h"
+#if !defined(DATA_RAW)
+  #include "WeatherSensor.h"
+#endif
+#if defined(DATA_JSON_RAW) || defined(DATA_JSON_INPUT)
 #include <ArduinoJson.h> // https://github.com/bblanchon/ArduinoJson
+#endif
 
 #if defined(ARDUINO_LILYGO_T3S3_SX1262) || defined(ARDUINO_LILYGO_T3S3_SX1276) || defined(ARDUINO_LILYGO_T3S3_LR1121)
   // Using custom SPI 
@@ -108,8 +114,10 @@ static const Module::RfSwitchMode_t rfswitch_table[] = {
 };
 #endif
 
+#if !defined(DATA_RAW)
 // Weather sensor object; used for message generation
 WeatherSensor ws;
+#endif
 
 void setup()
 {
@@ -125,20 +133,20 @@ void setup()
   log_i("%s Initializing ... ", TRANSCEIVER_CHIP);
 
   ConfigFSK_t config;
-  config.frequency = 868.3;              // MHz
-  config.bitRate = 8.21;                 // kBaud
-  config.frequencyDeviation = 57.136417; // kHz
-  config.power = TX_POWER;               // dBm
-  config.preambleLength = 32;            // bits
+  config.frequency = RADIOLIB_UNIT_KILO(868300);                 // Hz
+  config.bitRate = 8210;                                         // Baud
+  config.frequencyDeviation = RADIOLIB_UNIT_KILO_FLT(57.136417); // Hz
+  config.power = TX_POWER;                                       // dBm
+  config.preambleLength = 32;                                    // bits
 
   // RX bandwidth in kHz, radio chip specific (see RadioLib documentation for details)
 #if defined(USE_CC1101)
-  config.receiverBandwidth = 270;
+  config.receiverBandwidth = RADIOLIB_UNIT_KILO(270);
 #elif defined(USE_SX1276)
-  config.receiverBandwidth = 250;
+  config.receiverBandwidth = RADIOLIB_UNIT_KILO(250);
 #else
   // USE_SX1262 / USE_LR1121
-  config.receiverBandwidth = 234.3;
+  config.receiverBandwidth = 234300;
 #endif
 
 #if defined(USE_CC1101)
@@ -165,11 +173,13 @@ void setup()
   radio.setRfSwitchTable(rfswitch_dio_pins, rfswitch_table);
 
   // LR1121 TCXO Voltage 2.85~3.15V
-  radio.setTCXO(3.0);
+  radio.setTCXO(RadioLibTCXOVoltage_t::Voltage3V0);
 #endif
 
+#if !defined(DATA_RAW)
   // Set weather sensor array size to 1
   ws.sensor.resize(1);
+#endif
 }
 
 int msgBegin(uint8_t *msg)
@@ -409,6 +419,7 @@ bool deSerialize(Encoders encoder, const String& json_str)
 }
 #endif
 
+#if !defined(DATA_RAW)
 //
 // From from rtl_433 project - https://github.com/merbanan/rtl_433/blob/master/src/devices/bresser_5in1.c (20220212)
 //
@@ -1007,6 +1018,7 @@ uint8_t encodeBresserLeakagePayload(uint8_t *msg)
   // Return message size
   return 10;
 }
+#endif
 
 void loop()
 {
